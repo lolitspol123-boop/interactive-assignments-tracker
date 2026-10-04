@@ -1,0 +1,2052 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Assignment Tracker Web Dashboard</title>
+    <meta name="description" content="An interactive, single-file assignment and homework tracker web dashboard with local storage persistence, filtering, sorting, summary metrics, and backup import/export." />
+    <meta property="og:title" content="Assignment Tracker Web Dashboard" />
+    <meta property="og:description" content="An interactive, single-file assignment and homework tracker web dashboard with local storage persistence, filtering, sorting, summary metrics, and backup import/export." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+              mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
+            },
+            colors: {
+              brand: {
+                50: '#f0fdfa',
+                100: '#ccfbf1',
+                500: '#14b8a6',
+                600: '#0d9488',
+                700: '#0f766e',
+              }
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      /* Custom scrollbars */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .dark ::-webkit-scrollbar-thumb {
+        background: #27272a;
+        border-radius: 4px;
+      }
+      .dark ::-webkit-scrollbar-thumb:hover {
+        background: #3f3f46;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #e2e8f0;
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #cbd5e1;
+      }
+
+      /* Micro-transitions */
+      .modal-backdrop {
+        transition: opacity 0.2s ease-in-out;
+      }
+      .modal-content {
+        transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease-in-out;
+      }
+      .task-card {
+        transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+      }
+      .task-card:hover {
+        transform: translateY(-1px);
+      }
+    </style>
+  </head>
+  <body class="min-h-screen bg-slate-50 text-slate-900 dark:bg-zinc-950 dark:text-zinc-100 font-sans antialiased transition-colors duration-200">
+    
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2.5 max-w-sm pointer-events-none" aria-live="polite"></div>
+
+    <!-- Main App Container -->
+    <div class="min-h-screen flex flex-col">
+      
+      <!-- Top Navigation Bar -->
+      <header class="sticky top-0 z-30 border-b border-slate-200 dark:border-zinc-800/80 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-lg bg-teal-600 dark:bg-teal-500 text-white flex items-center justify-center shadow-sm">
+              <!-- Book/Check icon -->
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-0.5-0.05" />
+                <path d="m9 9.5 2 2 4-4" />
+              </svg>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <h1 class="text-base font-semibold tracking-tight text-slate-900 dark:text-zinc-100">Assignment Tracker</h1>
+                <span class="text-xs font-mono px-1.5 py-0.5 rounded bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400">Local</span>
+              </div>
+              <p class="text-xs text-slate-500 dark:text-zinc-400 hidden sm:block">Plan, prioritize & conquer coursework deadlines</p>
+            </div>
+          </div>
+
+          <!-- Header Right Utilities -->
+          <div class="flex items-center gap-2">
+            <!-- Theme Toggle -->
+            <button id="theme-toggle" class="p-2 rounded-lg text-slate-500 hover:text-slate-800 dark:text-zinc-400 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800/80 transition-colors" title="Toggle Light / Dark mode" aria-label="Toggle theme">
+              <svg id="theme-icon-dark" class="w-4 h-4 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 9h-1m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+              <svg id="theme-icon-light" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+              </svg>
+            </button>
+
+            <!-- Export / Import Menu Button -->
+            <div class="relative">
+              <button id="backup-menu-btn" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-zinc-300 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg hover:bg-slate-50 dark:hover:bg-zinc-800/60 shadow-xs transition-colors">
+                <svg class="w-3.5 h-3.5 text-slate-500 dark:text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                </svg>
+                <span>Backup</span>
+                <svg class="w-3 h-3 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              <!-- Dropdown Menu -->
+              <div id="backup-dropdown" class="hidden absolute right-0 mt-1.5 w-56 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg shadow-lg py-1.5 z-40 text-xs">
+                <button id="btn-export-json" class="w-full text-left px-3.5 py-2 text-slate-700 dark:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800 flex items-center gap-2">
+                  <svg class="w-4 h-4 text-teal-600 dark:text-teal-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  <div>
+                    <div class="font-medium">Export Data (JSON)</div>
+                    <div class="text-[10px] text-slate-400">Download current assignments</div>
+                  </div>
+                </button>
+                <label for="import-file-input" class="w-full text-left px-3.5 py-2 text-slate-700 dark:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800 flex items-center gap-2 cursor-pointer">
+                  <svg class="w-4 h-4 text-indigo-600 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                  </svg>
+                  <div>
+                    <div class="font-medium">Import Data (JSON)</div>
+                    <div class="text-[10px] text-slate-400">Restore or merge from backup</div>
+                  </div>
+                </label>
+                <input type="file" id="import-file-input" accept=".json,application/json" class="hidden" />
+
+                <div class="border-t border-slate-100 dark:border-zinc-800 my-1"></div>
+                <button id="btn-load-sample" class="w-full text-left px-3.5 py-2 text-slate-700 dark:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800 flex items-center gap-2">
+                  <svg class="w-4 h-4 text-emerald-600 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                  </svg>
+                  <div>
+                    <div class="font-medium">Load Sample Tasks</div>
+                    <div class="text-[10px] text-slate-400">Add demo coursework data</div>
+                  </div>
+                </button>
+                <button id="btn-clear-all" class="w-full text-left px-3.5 py-2 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 flex items-center gap-2">
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                  <span class="font-medium">Reset All Data</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- New Task Button -->
+            <button id="btn-add-task" class="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-medium text-white bg-teal-600 hover:bg-teal-700 dark:bg-teal-500 dark:hover:bg-teal-600 rounded-lg shadow-sm transition-colors focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 dark:focus:ring-offset-zinc-950">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 4v16m8-8H4" />
+              </svg>
+              <span>Add Task</span>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <!-- Main Content Area -->
+      <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+        <!-- 1. Dashboard Summary Metric Cards -->
+        <section aria-label="Dashboard Metrics" class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <!-- Total Tasks -->
+          <div class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800/80 rounded-xl p-4 flex flex-col justify-between shadow-xs">
+            <div class="flex items-center justify-between text-slate-500 dark:text-zinc-400">
+              <span class="text-xs font-medium uppercase tracking-wider">Total Tasks</span>
+              <div class="w-7 h-7 rounded-lg bg-slate-100 dark:bg-zinc-800 flex items-center justify-center text-slate-600 dark:text-zinc-300">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+              </div>
+            </div>
+            <div class="mt-3 flex items-baseline justify-between">
+              <span id="metric-total" class="text-2xl sm:text-3xl font-semibold tracking-tight text-slate-900 dark:text-zinc-100">0</span>
+              <span id="metric-completion-rate" class="text-xs font-medium text-slate-500 dark:text-zinc-400">0% Done</span>
+            </div>
+            <!-- Progress Bar -->
+            <div class="mt-2 w-full bg-slate-100 dark:bg-zinc-800 rounded-full h-1.5 overflow-hidden">
+              <div id="metric-progress-bar" class="bg-teal-500 h-full rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+          </div>
+
+          <!-- Pending Tasks -->
+          <div class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800/80 rounded-xl p-4 flex flex-col justify-between shadow-xs">
+            <div class="flex items-center justify-between text-slate-500 dark:text-zinc-400">
+              <span class="text-xs font-medium uppercase tracking-wider">Pending</span>
+              <div class="w-7 h-7 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+            </div>
+            <div class="mt-3 flex items-baseline justify-between">
+              <span id="metric-pending" class="text-2xl sm:text-3xl font-semibold tracking-tight text-slate-900 dark:text-zinc-100">0</span>
+              <span id="metric-breakdown-pending" class="text-xs text-slate-500 dark:text-zinc-400">0 To Do · 0 In Progress</span>
+            </div>
+            <div class="mt-2 text-[11px] text-slate-400 dark:text-zinc-500 truncate">Requires your attention</div>
+          </div>
+
+          <!-- Overdue Tasks -->
+          <div id="metric-card-overdue" class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800/80 rounded-xl p-4 flex flex-col justify-between shadow-xs transition-colors">
+            <div class="flex items-center justify-between text-slate-500 dark:text-zinc-400">
+              <span class="text-xs font-medium uppercase tracking-wider">Overdue</span>
+              <div class="w-7 h-7 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 flex items-center justify-center">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+            </div>
+            <div class="mt-3 flex items-baseline justify-between">
+              <span id="metric-overdue" class="text-2xl sm:text-3xl font-semibold tracking-tight text-slate-900 dark:text-zinc-100">0</span>
+              <span id="metric-overdue-status" class="text-xs font-medium text-slate-400 dark:text-zinc-500">All caught up</span>
+            </div>
+            <div class="mt-2 text-[11px] text-slate-400 dark:text-zinc-500 truncate">Passed deadline & not done</div>
+          </div>
+
+          <!-- Completed Tasks -->
+          <div class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800/80 rounded-xl p-4 flex flex-col justify-between shadow-xs">
+            <div class="flex items-center justify-between text-slate-500 dark:text-zinc-400">
+              <span class="text-xs font-medium uppercase tracking-wider">Completed</span>
+              <div class="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+            </div>
+            <div class="mt-3 flex items-baseline justify-between">
+              <span id="metric-completed" class="text-2xl sm:text-3xl font-semibold tracking-tight text-slate-900 dark:text-zinc-100">0</span>
+              <span class="text-xs font-medium text-emerald-600 dark:text-emerald-400">Done</span>
+            </div>
+            <div class="mt-2 text-[11px] text-slate-400 dark:text-zinc-500 truncate">Turned in or finished</div>
+          </div>
+        </section>
+
+        <!-- 2. Controls Bar: Search, Filters, Sorting, and View Switcher -->
+        <section aria-label="Filters and Controls" class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800/80 rounded-xl p-3.5 sm:p-4 shadow-xs space-y-3">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+            
+            <!-- Search Input -->
+            <div class="relative flex-1 min-w-[200px]">
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 dark:text-zinc-500">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+              <input 
+                type="text" 
+                id="search-input" 
+                placeholder="Search by title, attached files, notes..." 
+                class="w-full pl-9 pr-8 py-2 text-xs sm:text-sm bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-lg text-slate-900 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500"
+              />
+              <button id="clear-search-btn" class="hidden absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <!-- View Switcher & Quick Counter -->
+            <div class="flex items-center justify-between md:justify-end gap-2">
+              <span id="filtered-count-badge" class="text-xs text-slate-500 dark:text-zinc-400 font-mono">
+                Showing <strong class="text-slate-800 dark:text-zinc-200" id="visible-count">0</strong> tasks
+              </span>
+
+              <!-- View Mode Toggle: Grid vs Table -->
+              <div class="flex items-center p-0.5 bg-slate-100 dark:bg-zinc-800 rounded-lg">
+                <button id="view-card-btn" class="p-1.5 rounded-md text-slate-700 dark:text-zinc-200 bg-white dark:bg-zinc-900 shadow-xs transition-colors" title="Grid View" aria-label="Grid View">
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                  </svg>
+                </button>
+                <button id="view-table-btn" class="p-1.5 rounded-md text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-zinc-100 transition-colors" title="Table View" aria-label="Table View">
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Secondary Filters Row -->
+          <div class="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100 dark:border-zinc-800/80 text-xs">
+            
+            <!-- Files Filter -->
+            <div class="flex items-center gap-1.5">
+              <label for="filter-files" class="text-slate-500 dark:text-zinc-400 font-medium">Files:</label>
+              <select id="filter-files" class="py-1.5 pl-2.5 pr-7 bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-lg text-slate-800 dark:text-zinc-200 focus:outline-none focus:ring-1 focus:ring-teal-500">
+                <option value="ALL">All Tasks</option>
+                <option value="HAS_FILES">Has Attached Files</option>
+                <option value="NO_FILES">No Files</option>
+              </select>
+            </div>
+
+            <!-- Status Filter -->
+            <div class="flex items-center gap-1.5">
+              <label for="filter-status" class="text-slate-500 dark:text-zinc-400 font-medium">Status:</label>
+              <select id="filter-status" class="py-1.5 pl-2.5 pr-7 bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-lg text-slate-800 dark:text-zinc-200 focus:outline-none focus:ring-1 focus:ring-teal-500">
+                <option value="ALL">All Statuses</option>
+                <option value="TO_DO">To Do</option>
+                <option value="IN_PROGRESS">In Progress</option>
+                <option value="DONE">Done</option>
+                <option value="OVERDUE">Overdue Only</option>
+              </select>
+            </div>
+
+            <!-- Priority Filter -->
+            <div class="flex items-center gap-1.5">
+              <label for="filter-priority" class="text-slate-500 dark:text-zinc-400 font-medium">Priority:</label>
+              <select id="filter-priority" class="py-1.5 pl-2.5 pr-7 bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-lg text-slate-800 dark:text-zinc-200 focus:outline-none focus:ring-1 focus:ring-teal-500">
+                <option value="ALL">All Priorities</option>
+                <option value="HIGH">High Priority</option>
+                <option value="MEDIUM">Medium Priority</option>
+                <option value="LOW">Low Priority</option>
+              </select>
+            </div>
+
+            <!-- Sort By -->
+            <div class="flex items-center gap-1.5 sm:ml-auto">
+              <label for="sort-by" class="text-slate-500 dark:text-zinc-400 font-medium flex items-center gap-1">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
+                </svg>
+                <span>Sort:</span>
+              </label>
+              <select id="sort-by" class="py-1.5 pl-2.5 pr-7 bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-lg text-slate-800 dark:text-zinc-200 focus:outline-none focus:ring-1 focus:ring-teal-500">
+                <option value="DUE_ASC">Due Date (Earliest first)</option>
+                <option value="DUE_DESC">Due Date (Latest first)</option>
+                <option value="PRIORITY_DESC">Priority (High to Low)</option>
+                <option value="TITLE_ASC">Title (A to Z)</option>
+                <option value="CREATED_DESC">Recently Added</option>
+              </select>
+            </div>
+
+            <!-- Reset Filters Button -->
+            <button id="reset-filters-btn" class="hidden text-xs text-teal-600 dark:text-teal-400 hover:underline font-medium ml-1">
+              Reset Filters
+            </button>
+          </div>
+        </section>
+
+        <!-- 3. Tasks Container -->
+        <section aria-label="Tasks List" id="tasks-section" class="relative">
+          
+          <!-- Card Grid View Container -->
+          <div id="cards-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <!-- Dynamic task cards inserted here via JS -->
+          </div>
+
+          <!-- Table View Container -->
+          <div id="table-container" class="hidden bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800/80 rounded-xl overflow-hidden shadow-xs">
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs sm:text-sm">
+                <thead class="bg-slate-50 dark:bg-zinc-950/60 text-slate-500 dark:text-zinc-400 uppercase tracking-wider text-[11px] border-b border-slate-200 dark:border-zinc-800">
+                  <tr>
+                    <th class="py-3 px-4 w-12 text-center">Done</th>
+                    <th class="py-3 px-4 font-medium">Task Title & Details</th>
+                    <th class="py-3 px-4 font-medium">Attached Files</th>
+                    <th class="py-3 px-4 font-medium">Due Date</th>
+                    <th class="py-3 px-4 font-medium">Priority</th>
+                    <th class="py-3 px-4 font-medium">Status</th>
+                    <th class="py-3 px-4 text-right font-medium">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="table-body" class="divide-y divide-slate-100 dark:divide-zinc-800/60">
+                  <!-- Dynamic rows inserted here via JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Empty State Container -->
+          <div id="empty-state" class="hidden flex-col items-center justify-center p-12 text-center bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800/80 rounded-2xl shadow-xs">
+            <div class="w-14 h-14 rounded-2xl bg-teal-50 dark:bg-teal-950/40 text-teal-600 dark:text-teal-400 flex items-center justify-center mb-4">
+              <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+              </svg>
+            </div>
+            <h3 id="empty-state-title" class="text-base font-semibold text-slate-800 dark:text-zinc-200 mb-1">No assignments found</h3>
+            <p id="empty-state-desc" class="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 max-w-sm mb-5">
+              No tasks match your search or active filter criteria. Clear your filters or create a new assignment to stay on top of your semester.
+            </p>
+            <div class="flex items-center gap-3">
+              <button id="empty-action-add" class="px-4 py-2 text-xs font-medium text-white bg-teal-600 hover:bg-teal-700 dark:bg-teal-500 dark:hover:bg-teal-600 rounded-lg shadow-sm transition-colors">
+                Add New Task
+              </button>
+              <button id="empty-action-sample" class="px-4 py-2 text-xs font-medium text-slate-700 dark:text-zinc-300 bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 rounded-lg transition-colors">
+                Load Sample Tasks
+              </button>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <!-- Footer -->
+      <footer class="mt-auto border-t border-slate-200 dark:border-zinc-800/80 py-4 text-center text-xs text-slate-400 dark:text-zinc-500">
+        <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+          <span>Assignment Tracker · Persistent in Browser LocalStorage</span>
+          <span class="flex items-center gap-2">
+            <span class="inline-block w-2 h-2 rounded-full bg-emerald-500"></span>
+            <span>All changes saved offline instantly</span>
+          </span>
+        </div>
+      </footer>
+    </div>
+
+    <!-- 4. Modal: Add / Edit Task -->
+    <div id="task-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+      <!-- Backdrop -->
+      <div id="modal-backdrop" class="modal-backdrop fixed inset-0 bg-slate-900/60 dark:bg-black/75 backdrop-blur-xs opacity-0"></div>
+
+      <!-- Modal Card -->
+      <div id="modal-card" class="modal-content relative w-full max-w-lg bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-2xl p-5 sm:p-6 z-10 opacity-0 scale-95">
+        <div class="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-zinc-800">
+          <div>
+            <h2 id="modal-title" class="text-base font-semibold text-slate-900 dark:text-zinc-100">Add Assignment</h2>
+            <p class="text-xs text-slate-500 dark:text-zinc-400">Fill in assignment deadlines and requirements</p>
+          </div>
+          <button id="modal-close-btn" class="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <form id="task-form" class="mt-4 space-y-4">
+          <input type="hidden" id="task-id" />
+
+          <!-- Title Input -->
+          <div>
+            <label for="input-title" class="block text-xs font-medium text-slate-700 dark:text-zinc-300 mb-1">
+              Task Title <span class="text-rose-500">*</span>
+            </label>
+            <input 
+              type="text" 
+              id="input-title" 
+              required 
+              placeholder="e.g. Chapter 4 Problem Set, Research Paper Draft..." 
+              class="w-full px-3 py-2 text-xs sm:text-sm bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-lg text-slate-900 dark:text-zinc-100 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500"
+            />
+          </div>
+
+          <!-- Due Date, Priority, and Status Grid -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label for="input-due-date" class="block text-xs font-medium text-slate-700 dark:text-zinc-300 mb-1">
+                Due Date & Time <span class="text-rose-500">*</span>
+              </label>
+              <input 
+                type="datetime-local" 
+                id="input-due-date" 
+                required 
+                class="w-full px-3 py-2 text-xs sm:text-sm bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-lg text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500"
+              />
+            </div>
+
+            <div>
+              <label for="input-priority" class="block text-xs font-medium text-slate-700 dark:text-zinc-300 mb-1">
+                Priority
+              </label>
+              <select id="input-priority" class="w-full px-3 py-2 text-xs sm:text-sm bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-lg text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500">
+                <option value="HIGH">High Priority</option>
+                <option value="MEDIUM" selected>Medium Priority</option>
+                <option value="LOW">Low Priority</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="input-status" class="block text-xs font-medium text-slate-700 dark:text-zinc-300 mb-1">
+                Status
+              </label>
+              <select id="input-status" class="w-full px-3 py-2 text-xs sm:text-sm bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-lg text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500">
+                <option value="TO_DO" selected>To Do</option>
+                <option value="IN_PROGRESS">In Progress</option>
+                <option value="DONE">Done</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Integrated Files Section -->
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <label class="block text-xs font-medium text-slate-700 dark:text-zinc-300">
+                Integrated Attached Files
+              </label>
+              <span class="text-[11px] text-slate-400 dark:text-zinc-500">PDF, images, docs, code, zip</span>
+            </div>
+
+            <!-- Drag & Drop Zone -->
+            <div 
+              id="file-dropzone" 
+              class="relative border-2 border-dashed border-slate-200 dark:border-zinc-800 rounded-xl p-3 text-center hover:border-teal-500 dark:hover:border-teal-500 transition-colors cursor-pointer bg-slate-50/50 dark:bg-zinc-950/40"
+            >
+              <input type="file" id="input-files" multiple class="hidden" />
+              <div class="flex flex-col items-center justify-center gap-1 pointer-events-none py-1">
+                <div class="w-8 h-8 rounded-full bg-slate-100 dark:bg-zinc-800 flex items-center justify-center text-teal-600 dark:text-teal-400">
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                  </svg>
+                </div>
+                <div class="text-xs text-slate-700 dark:text-zinc-300">
+                  <span class="font-medium text-teal-600 dark:text-teal-400">Click to upload</span> or drag and drop files here
+                </div>
+                <div class="text-[10px] text-slate-400 dark:text-zinc-500">Stored directly in your local browser dashboard</div>
+              </div>
+            </div>
+
+            <!-- Attached Files List -->
+            <div id="modal-file-list" class="mt-2 space-y-1.5 max-h-36 overflow-y-auto">
+              <!-- Dynamically populated files -->
+            </div>
+          </div>
+
+          <!-- Description / Notes -->
+          <div>
+            <label for="input-notes" class="block text-xs font-medium text-slate-700 dark:text-zinc-300 mb-1">
+              Notes & Instructions (Optional)
+            </label>
+            <textarea 
+              id="input-notes" 
+              rows="3" 
+              placeholder="e.g. Include citations in APA format, review slides 14-22, minimum 1,500 words..." 
+              class="w-full px-3 py-2 text-xs sm:text-sm bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-lg text-slate-900 dark:text-zinc-100 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500 resize-none"
+            ></textarea>
+          </div>
+
+          <!-- Modal Actions -->
+          <div class="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100 dark:border-zinc-800">
+            <button 
+              type="button" 
+              id="modal-cancel-btn" 
+              class="px-4 py-2 text-xs font-medium text-slate-700 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+            >
+              Cancel
+            </button>
+            <button 
+              type="submit" 
+              id="modal-submit-btn" 
+              class="px-4 py-2 text-xs font-medium text-white bg-teal-600 hover:bg-teal-700 dark:bg-teal-500 dark:hover:bg-teal-600 rounded-lg shadow-sm transition-colors"
+            >
+              Save Assignment
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- 5. Delete Confirmation Modal -->
+    <div id="delete-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div id="delete-backdrop" class="modal-backdrop fixed inset-0 bg-slate-900/60 dark:bg-black/75 backdrop-blur-xs opacity-0"></div>
+      <div id="delete-card" class="modal-content relative w-full max-w-sm bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-xl p-5 z-10 opacity-0 scale-95">
+        <div class="w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 flex items-center justify-center mb-3">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
+        </div>
+        <h3 class="text-sm font-semibold text-slate-900 dark:text-zinc-100">Delete Assignment?</h3>
+        <p id="delete-task-name" class="mt-1 text-xs text-slate-500 dark:text-zinc-400">Are you sure you want to delete this task? This action cannot be undone.</p>
+        <div class="mt-4 flex items-center justify-end gap-2">
+          <button id="delete-cancel-btn" class="px-3.5 py-1.5 text-xs font-medium text-slate-700 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded-lg transition-colors">
+            Cancel
+          </button>
+          <button id="delete-confirm-btn" class="px-3.5 py-1.5 text-xs font-medium text-white bg-rose-600 hover:bg-rose-700 rounded-lg transition-colors">
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. Import Choice Modal (Merge vs Overwrite) -->
+    <div id="import-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div id="import-backdrop" class="modal-backdrop fixed inset-0 bg-slate-900/60 dark:bg-black/75 backdrop-blur-xs opacity-0"></div>
+      <div id="import-card" class="modal-content relative w-full max-w-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-xl p-5 sm:p-6 z-10 opacity-0 scale-95">
+        <h3 class="text-sm font-semibold text-slate-900 dark:text-zinc-100">Import Assignments</h3>
+        <p id="import-summary-text" class="mt-1 text-xs text-slate-500 dark:text-zinc-400">Found 0 assignments in backup file.</p>
+        <div class="mt-4 space-y-2 text-xs">
+          <label class="flex items-center gap-2 p-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-800/50 cursor-pointer">
+            <input type="radio" name="import-mode" value="merge" checked class="text-teal-600 focus:ring-teal-500" />
+            <div>
+              <div class="font-medium text-slate-800 dark:text-zinc-200">Merge with existing assignments</div>
+              <div class="text-[11px] text-slate-500 dark:text-zinc-400">Adds incoming tasks and updates matching IDs</div>
+            </div>
+          </label>
+          <label class="flex items-center gap-2 p-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-800/50 cursor-pointer">
+            <input type="radio" name="import-mode" value="replace" class="text-teal-600 focus:ring-teal-500" />
+            <div>
+              <div class="font-medium text-slate-800 dark:text-zinc-200">Replace entire dashboard</div>
+              <div class="text-[11px] text-slate-500 dark:text-zinc-400">Erases current tasks and loads from backup</div>
+            </div>
+          </label>
+        </div>
+        <div class="mt-5 flex items-center justify-end gap-2">
+          <button id="import-cancel-btn" class="px-3.5 py-1.5 text-xs font-medium text-slate-700 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded-lg transition-colors">
+            Cancel
+          </button>
+          <button id="import-confirm-btn" class="px-4 py-1.5 text-xs font-medium text-white bg-teal-600 hover:bg-teal-700 dark:bg-teal-500 rounded-lg transition-colors">
+            Confirm Import
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6.5. File Preview Modal -->
+    <div id="preview-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div id="preview-backdrop" class="modal-backdrop fixed inset-0 bg-slate-900/70 dark:bg-black/80 backdrop-blur-xs opacity-0"></div>
+      <div id="preview-card" class="modal-content relative w-full max-w-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-2xl p-5 z-10 opacity-0 scale-95 flex flex-col max-h-[85vh]">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-zinc-800">
+          <div class="flex items-center gap-2 min-w-0">
+            <div id="preview-icon-wrapper" class="w-8 h-8 rounded-lg bg-teal-50 dark:bg-teal-950/40 text-teal-600 dark:text-teal-400 flex items-center justify-center shrink-0">
+              <!-- dynamic icon -->
+            </div>
+            <div class="min-w-0">
+              <h3 id="preview-filename" class="text-sm font-semibold text-slate-900 dark:text-zinc-100 truncate">File Preview</h3>
+              <p id="preview-filesize" class="text-[11px] text-slate-400 font-mono">0 KB</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="preview-download-btn" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-teal-600 hover:bg-teal-700 dark:bg-teal-500 rounded-lg shadow-xs transition-colors">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              <span>Download</span>
+            </button>
+            <button id="preview-close-btn" class="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800">
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div id="preview-body" class="mt-4 flex-1 overflow-auto flex items-center justify-center min-h-[200px] bg-slate-50 dark:bg-zinc-950 rounded-xl p-3 border border-slate-100 dark:border-zinc-800/80">
+          <!-- preview content -->
+        </div>
+      </div>
+    </div>
+    <script>
+      (function() {
+        'use strict';
+
+        const STORAGE_KEY = 'assignment_tracker_tasks_v1';
+        const THEME_KEY = 'assignment_tracker_theme';
+        const VIEW_KEY = 'assignment_tracker_view';
+
+        // State
+        let assignments = [];
+        let activeView = localStorage.getItem(VIEW_KEY) || 'card'; // 'card' or 'table'
+        let pendingDeleteId = null;
+        let pendingImportData = null;
+
+        // Modal active files state
+        let modalAttachedFiles = [];
+
+        // File utilities
+        function formatFileSize(bytes) {
+          if (!bytes || bytes === 0) return '0 B';
+          const k = 1024;
+          const sizes = ['B', 'KB', 'MB', 'GB'];
+          const i = Math.floor(Math.log(bytes) / Math.log(k));
+          return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        }
+
+        function getFileIcon(fileName = '', mimeType = '') {
+          const ext = fileName.split('.').pop().toLowerCase();
+          const isImg = mimeType.startsWith('image/') || ['png', 'jpg', 'jpeg', 'webp', 'svg', 'gif'].includes(ext);
+          const isPdf = mimeType.includes('pdf') || ext === 'pdf';
+          const isCode = ['js', 'ts', 'py', 'html', 'css', 'json', 'sql', 'cpp', 'java'].includes(ext);
+          const isDoc = ['doc', 'docx', 'txt', 'rtf', 'md'].includes(ext);
+          const isSheet = ['xls', 'xlsx', 'csv'].includes(ext);
+
+          if (isImg) {
+            return `<svg class="w-3.5 h-3.5 text-sky-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>`;
+          }
+          if (isPdf) {
+            return `<svg class="w-3.5 h-3.5 text-rose-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-6 4h4" /></svg>`;
+          }
+          if (isCode) {
+            return `<svg class="w-3.5 h-3.5 text-emerald-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" /></svg>`;
+          }
+          if (isSheet) {
+            return `<svg class="w-3.5 h-3.5 text-teal-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 4h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>`;
+          }
+          if (isDoc) {
+            return `<svg class="w-3.5 h-3.5 text-indigo-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>`;
+          }
+          return `<svg class="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>`;
+        }
+
+        // Helper to format due date and status
+        function parseDate(dateStr) {
+          return new Date(dateStr);
+        }
+
+        function isOverdue(dueDateStr, status) {
+          if (status === 'DONE') return false;
+          const due = new Date(dueDateStr).getTime();
+          const now = Date.now();
+          return due < now;
+        }
+
+        function formatDueDisplay(dueDateStr) {
+          const date = new Date(dueDateStr);
+          if (isNaN(date.getTime())) return { text: 'Invalid date', isOverdue: false, urgent: false };
+          
+          const now = new Date();
+          const diffMs = date.getTime() - now.getTime();
+          const diffHours = Math.round(diffMs / (1000 * 60 * 60));
+          const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+          const dateFormatted = date.toLocaleDateString(undefined, { 
+            month: 'short', 
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          });
+
+          if (diffMs < 0) {
+            const overdueDays = Math.abs(diffDays);
+            const overdueHours = Math.abs(diffHours);
+            const label = overdueHours < 24 
+              ? `${overdueHours}h overdue` 
+              : `${overdueDays}d overdue`;
+            return {
+              text: `${dateFormatted} (${label})`,
+              badgeText: label,
+              isOverdue: true,
+              urgent: true
+            };
+          }
+
+          if (diffHours <= 24) {
+            const label = diffHours === 0 ? 'Due soon' : `Due in ${diffHours}h`;
+            return {
+              text: `${dateFormatted} (${label})`,
+              badgeText: label,
+              isOverdue: false,
+              urgent: true
+            };
+          }
+
+          if (diffDays <= 7) {
+            const label = `Due in ${diffDays}d`;
+            return {
+              text: `${dateFormatted} (${label})`,
+              badgeText: label,
+              isOverdue: false,
+              urgent: diffDays <= 2
+            };
+          }
+
+          return {
+            text: dateFormatted,
+            badgeText: `${diffDays} days left`,
+            isOverdue: false,
+            urgent: false
+          };
+        }
+
+        // Sample initial datasets for pleasant first-time UX with integrated files
+        const SAMPLE_ASSIGNMENTS = [
+          {
+            id: 'task-1',
+            title: 'Linear Algebra Problem Set 4',
+            dueDate: new Date(Date.now() + 1000 * 60 * 60 * 18).toISOString().slice(0, 16),
+            priority: 'HIGH',
+            status: 'IN_PROGRESS',
+            notes: 'Complete eigenvalue and eigenvector proofs on Section 5.3. Show all matrix determinant steps.',
+            files: [
+              {
+                id: 'file-1-1',
+                name: 'problem-set-4-instructions.txt',
+                size: 1420,
+                type: 'text/plain',
+                data: 'data:text/plain;charset=utf-8,Linear%20Algebra%20Problem%20Set%204%0A1.%20Find%20the%20eigenvalues%20of%20matrix%20A.%0A2.%20Diagonalize%20the%20following%203x3%20matrix.'
+              }
+            ],
+            createdAt: Date.now() - 1000 * 60 * 60 * 24
+          },
+          {
+            id: 'task-2',
+            title: 'Distributed Systems Raft Consensus Lab',
+            dueDate: new Date(Date.now() + 1000 * 60 * 60 * 48).toISOString().slice(0, 16),
+            priority: 'HIGH',
+            status: 'TO_DO',
+            notes: 'Implement leader election and heartbeat ping mechanism in Go. Pass tests 2A and 2B.',
+            files: [
+              {
+                id: 'file-2-1',
+                name: 'raft-specs-v2.md',
+                size: 2850,
+                type: 'text/markdown',
+                data: 'data:text/plain;charset=utf-8,%23%20Raft%20Consensus%20Lab%0A-%20Leader%20Election%0A-%20Heartbeat%20Interval%3A%20150ms%0A-%20Pass%20Tests%202A%20and%202B'
+              },
+              {
+                id: 'file-2-2',
+                name: 'test_cases.json',
+                size: 890,
+                type: 'application/json',
+                data: 'data:application/json;charset=utf-8,%7B%22tests%22%3A%20%5B%222A%22%2C%20%222B%22%5D%2C%20%22timeout%22%3A%20300%7D'
+              }
+            ],
+            createdAt: Date.now() - 1000 * 60 * 60 * 36
+          },
+          {
+            id: 'task-3',
+            title: 'Modern European History Term Essay Draft',
+            dueDate: new Date(Date.now() + 1000 * 60 * 60 * 120).toISOString().slice(0, 16),
+            priority: 'MEDIUM',
+            status: 'TO_DO',
+            notes: 'Topic: Post-WWII economic reconstruction and the Marshall Plan. 1,500 words with 4 peer-reviewed sources.',
+            files: [
+              {
+                id: 'file-3-1',
+                name: 'essay_outline.txt',
+                size: 1950,
+                type: 'text/plain',
+                data: 'data:text/plain;charset=utf-8,Essay%20Outline%3A%0AI.%20Introduction%20%26%20Thesis%0AII.%20Economic%20State%20in%201945%0AIII.%20Marshall%20Plan%20Implementation%0AIV.%20Outcomes'
+              }
+            ],
+            createdAt: Date.now() - 1000 * 60 * 60 * 48
+          },
+          {
+            id: 'task-4',
+            title: 'Quantum Mechanics Lab Report: Photoelectric Effect',
+            dueDate: new Date(Date.now() - 1000 * 60 * 60 * 12).toISOString().slice(0, 16),
+            priority: 'MEDIUM',
+            status: 'TO_DO',
+            notes: 'Graph stopping potential vs. frequency of incident light. Compute Planck constant experimental error.',
+            files: [],
+            createdAt: Date.now() - 1000 * 60 * 60 * 72
+          },
+          {
+            id: 'task-5',
+            title: 'Close Reading Analysis: Virginia Woolf',
+            dueDate: new Date(Date.now() - 1000 * 60 * 60 * 40).toISOString().slice(0, 16),
+            priority: 'LOW',
+            status: 'DONE',
+            notes: 'Submitted via Canvas submission portal. Score received: 95/100.',
+            files: [
+              {
+                id: 'file-5-1',
+                name: 'woolf_final_submission.txt',
+                size: 4320,
+                type: 'text/plain',
+                data: 'data:text/plain;charset=utf-8,Virginia%20Woolf%20Close%20Reading%0AAnalysis%20of%20stream%20of%20consciousness%20in%20To%20The%20Lighthouse.'
+              }
+            ],
+            createdAt: Date.now() - 1000 * 60 * 60 * 96
+          }
+        ];
+
+        // Persistence
+        function loadAssignments() {
+          try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              if (Array.isArray(parsed)) {
+                assignments = parsed;
+                return;
+              }
+            }
+          } catch (e) {
+            console.error('Failed to load assignments from localStorage', e);
+          }
+          // Default to sample assignments on initial run
+          assignments = [...SAMPLE_ASSIGNMENTS];
+          saveAssignments();
+        }
+
+        function saveAssignments() {
+          try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(assignments));
+          } catch (e) {
+            console.error('Failed to save to localStorage', e);
+            showToast('Storage quota exceeded or unavailable', 'error');
+          }
+          updateDashboard();
+        }
+
+        // Toast notifications
+        function showToast(message, type = 'success') {
+          const container = document.getElementById('toast-container');
+          const toast = document.createElement('div');
+          toast.className = `pointer-events-auto flex items-center gap-2.5 px-4 py-2.5 rounded-xl shadow-lg border text-xs font-medium transition-all transform duration-200 translate-y-2 opacity-0 ${
+            type === 'error'
+              ? 'bg-rose-900/90 text-rose-100 border-rose-700/60 backdrop-blur-md'
+              : type === 'info'
+              ? 'bg-indigo-900/90 text-indigo-100 border-indigo-700/60 backdrop-blur-md'
+              : 'bg-zinc-900/95 text-zinc-100 border-zinc-700/60 dark:bg-zinc-100/95 dark:text-zinc-900 backdrop-blur-md'
+          }`;
+
+          const iconSvg = type === 'error'
+            ? `<svg class="w-4 h-4 text-rose-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`
+            : `<svg class="w-4 h-4 text-teal-400 dark:text-teal-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>`;
+
+          toast.innerHTML = `${iconSvg}<span>${message}</span>`;
+          container.appendChild(toast);
+
+          // Animate in
+          requestAnimationFrame(() => {
+            toast.classList.remove('translate-y-2', 'opacity-0');
+          });
+
+          // Animate out and remove
+          setTimeout(() => {
+            toast.classList.add('opacity-0', 'translate-y-2');
+            setTimeout(() => toast.remove(), 250);
+          }, 3200);
+        }
+
+        // Theme management
+        function initTheme() {
+          const savedTheme = localStorage.getItem(THEME_KEY);
+          const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          const isDark = savedTheme ? savedTheme === 'dark' : prefersDark;
+
+          applyTheme(isDark);
+
+          document.getElementById('theme-toggle').addEventListener('click', () => {
+            const currentDark = document.documentElement.classList.contains('dark');
+            applyTheme(!currentDark);
+          });
+        }
+
+        function applyTheme(isDark) {
+          if (isDark) {
+            document.documentElement.classList.add('dark');
+            document.getElementById('theme-icon-dark').classList.remove('hidden');
+            document.getElementById('theme-icon-light').classList.add('hidden');
+            localStorage.setItem(THEME_KEY, 'dark');
+          } else {
+            document.documentElement.classList.remove('dark');
+            document.getElementById('theme-icon-dark').classList.add('hidden');
+            document.getElementById('theme-icon-light').classList.remove('hidden');
+            localStorage.setItem(THEME_KEY, 'light');
+          }
+        }
+
+        // Filtering and sorting
+        function getFilteredAndSortedAssignments() {
+          const searchQuery = document.getElementById('search-input').value.trim().toLowerCase();
+          const filesFilter = document.getElementById('filter-files').value;
+          const statusFilter = document.getElementById('filter-status').value;
+          const priorityFilter = document.getElementById('filter-priority').value;
+          const sortBy = document.getElementById('sort-by').value;
+
+          const resetBtn = document.getElementById('reset-filters-btn');
+          const isFiltered = searchQuery || filesFilter !== 'ALL' || statusFilter !== 'ALL' || priorityFilter !== 'ALL';
+          if (isFiltered) {
+            resetBtn.classList.remove('hidden');
+          } else {
+            resetBtn.classList.add('hidden');
+          }
+
+          let result = assignments.filter(task => {
+            // Search
+            if (searchQuery) {
+              const titleMatch = (task.title || '').toLowerCase().includes(searchQuery);
+              const notesMatch = (task.notes || '').toLowerCase().includes(searchQuery);
+              const filesMatch = (task.files || []).some(f => (f.name || '').toLowerCase().includes(searchQuery));
+              if (!titleMatch && !notesMatch && !filesMatch) return false;
+            }
+
+            // Files filter
+            if (filesFilter === 'HAS_FILES') {
+              if (!task.files || task.files.length === 0) return false;
+            } else if (filesFilter === 'NO_FILES') {
+              if (task.files && task.files.length > 0) return false;
+            }
+
+            // Status
+            if (statusFilter === 'OVERDUE') {
+              if (!isOverdue(task.dueDate, task.status)) return false;
+            } else if (statusFilter !== 'ALL') {
+              if (task.status !== statusFilter) return false;
+            }
+
+            // Priority
+            if (priorityFilter !== 'ALL' && task.priority !== priorityFilter) {
+              return false;
+            }
+
+            return true;
+          });
+
+          // Sort
+          const priorityWeight = { HIGH: 3, MEDIUM: 2, LOW: 1 };
+          result.sort((a, b) => {
+            if (sortBy === 'DUE_ASC') {
+              return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+            }
+            if (sortBy === 'DUE_DESC') {
+              return new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime();
+            }
+            if (sortBy === 'PRIORITY_DESC') {
+              const diff = (priorityWeight[b.priority] || 0) - (priorityWeight[a.priority] || 0);
+              if (diff !== 0) return diff;
+              return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+            }
+            if (sortBy === 'TITLE_ASC') {
+              return a.title.localeCompare(b.title);
+            }
+            if (sortBy === 'CREATED_DESC') {
+              return (b.createdAt || 0) - (a.createdAt || 0);
+            }
+            return 0;
+          });
+
+          return result;
+        }
+
+        // Summary metrics calculation
+        function updateSummaryMetrics() {
+          const total = assignments.length;
+          const completed = assignments.filter(t => t.status === 'DONE').length;
+          const todo = assignments.filter(t => t.status === 'TO_DO').length;
+          const inProgress = assignments.filter(t => t.status === 'IN_PROGRESS').length;
+          const pending = todo + inProgress;
+          const overdue = assignments.filter(t => isOverdue(t.dueDate, t.status)).length;
+          const completionPct = total === 0 ? 0 : Math.round((completed / total) * 100);
+
+          document.getElementById('metric-total').textContent = total;
+          document.getElementById('metric-completion-rate').textContent = `${completionPct}% Done`;
+          document.getElementById('metric-progress-bar').style.width = `${completionPct}%`;
+
+          document.getElementById('metric-pending').textContent = pending;
+          document.getElementById('metric-breakdown-pending').textContent = `${todo} To Do · ${inProgress} In Progress`;
+
+          document.getElementById('metric-overdue').textContent = overdue;
+          const overdueStatus = document.getElementById('metric-overdue-status');
+          const overdueCard = document.getElementById('metric-card-overdue');
+
+          if (overdue > 0) {
+            overdueStatus.textContent = 'Needs immediate action';
+            overdueStatus.className = 'text-xs font-semibold text-rose-600 dark:text-rose-400';
+            overdueCard.classList.add('border-rose-300', 'dark:border-rose-900/60');
+          } else {
+            overdueStatus.textContent = 'All caught up';
+            overdueStatus.className = 'text-xs font-medium text-slate-400 dark:text-zinc-500';
+            overdueCard.classList.remove('border-rose-300', 'dark:border-rose-900/60');
+          }
+
+          document.getElementById('metric-completed').textContent = completed;
+        }
+
+        // Helper render for Priority Badge
+        function renderPriorityBadge(priority) {
+          if (priority === 'HIGH') {
+            return `<span class="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-600 dark:text-rose-400">
+              <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>High
+            </span>`;
+          }
+          if (priority === 'MEDIUM') {
+            return `<span class="inline-flex items-center gap-1 text-[11px] font-medium text-amber-600 dark:text-amber-400">
+              <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>Medium
+            </span>`;
+          }
+          return `<span class="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500 dark:text-zinc-400">
+            <span class="w-1.5 h-1.5 rounded-full bg-slate-400 dark:bg-zinc-600"></span>Low
+          </span>`;
+        }
+
+        // Helper render for Status Tag / Dropdown
+        function renderStatusSelector(taskId, currentStatus) {
+          return `
+            <select data-action="quick-status" data-task-id="${taskId}" class="text-[11px] font-medium py-1 px-2 rounded-md bg-slate-100 dark:bg-zinc-800 border border-slate-200/80 dark:border-zinc-700/80 text-slate-700 dark:text-zinc-300 focus:outline-none focus:ring-1 focus:ring-teal-500">
+              <option value="TO_DO" ${currentStatus === 'TO_DO' ? 'selected' : ''}>To Do</option>
+              <option value="IN_PROGRESS" ${currentStatus === 'IN_PROGRESS' ? 'selected' : ''}>In Progress</option>
+              <option value="DONE" ${currentStatus === 'DONE' ? 'selected' : ''}>Done</option>
+            </select>
+          `;
+        }
+
+        // Render Cards View
+        function renderCards(filteredTasks) {
+          const container = document.getElementById('cards-container');
+          container.innerHTML = '';
+
+          filteredTasks.forEach(task => {
+            const isDone = task.status === 'DONE';
+            const overdue = isOverdue(task.dueDate, task.status);
+            const dueInfo = formatDueDisplay(task.dueDate);
+            const hasFiles = task.files && task.files.length > 0;
+            const filesCount = hasFiles ? task.files.length : 0;
+            const filesHtml = hasFiles 
+              ? task.files.map((file, idx) => `
+                <button 
+                  type="button"
+                  data-action="open-file" 
+                  data-task-id="${task.id}" 
+                  data-file-idx="${idx}"
+                  class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-200 border border-slate-200/70 dark:border-zinc-700/70 transition-colors truncate max-w-[150px]"
+                  title="${escapeHtml(file.name)} (${formatFileSize(file.size)})"
+                >
+                  ${getFileIcon(file.name, file.type)}
+                  <span class="truncate">${escapeHtml(file.name)}</span>
+                </button>
+              `).join('')
+              : `<span class="text-[11px] text-slate-400 dark:text-zinc-500">No attached files</span>`;
+
+            const card = document.createElement('div');
+            card.className = `task-card group relative bg-white dark:bg-zinc-900 border rounded-xl p-4 sm:p-5 shadow-xs flex flex-col justify-between ${
+              isDone 
+                ? 'border-slate-200 dark:border-zinc-800/60 opacity-75' 
+                : overdue 
+                ? 'border-rose-300 dark:border-rose-900/60 ring-1 ring-rose-500/20' 
+                : 'border-slate-200 dark:border-zinc-800/80 hover:border-slate-300 dark:hover:border-zinc-700'
+            }`;
+
+            card.innerHTML = `
+              <!-- Top Row: Files & Action Menu -->
+              <div>
+                <div class="flex items-center justify-between gap-2 mb-2.5">
+                  <div class="flex items-center gap-1.5 flex-wrap min-w-0">
+                    <span class="text-[11px] font-medium text-slate-500 dark:text-zinc-400 shrink-0">
+                      ${filesCount > 0 ? `Files (${filesCount}):` : 'Files:'}
+                    </span>
+                    ${filesHtml}
+                  </div>
+
+                  <div class="flex items-center gap-1 shrink-0">
+                    <button data-action="edit-task" data-task-id="${task.id}" class="p-1 rounded text-slate-400 hover:text-slate-700 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800" title="Edit Assignment">
+                      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                      </svg>
+                    </button>
+                    <button data-action="delete-task" data-task-id="${task.id}" class="p-1 rounded text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-slate-100 dark:hover:bg-zinc-800" title="Delete Assignment">
+                      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Main Title & Checkbox -->
+                <div class="flex items-start gap-2.5">
+                  <button 
+                    data-action="toggle-done" 
+                    data-task-id="${task.id}" 
+                    class="mt-0.5 shrink-0 w-4 h-4 rounded border flex items-center justify-center transition-colors ${
+                      isDone 
+                        ? 'bg-teal-600 border-teal-600 text-white' 
+                        : 'border-slate-300 dark:border-zinc-700 hover:border-teal-500 bg-transparent'
+                    }"
+                    title="${isDone ? 'Mark as Not Done' : 'Mark as Done'}"
+                    aria-label="Toggle completed"
+                  >
+                    ${isDone ? `<svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg>` : ''}
+                  </button>
+
+                  <div class="flex-1 min-w-0">
+                    <h4 class="text-sm font-semibold tracking-tight text-slate-900 dark:text-zinc-100 leading-snug break-words ${isDone ? 'line-through text-slate-400 dark:text-zinc-500' : ''}">
+                      ${escapeHtml(task.title)}
+                    </h4>
+
+                    ${task.notes ? `
+                      <p class="mt-1.5 text-xs text-slate-500 dark:text-zinc-400 line-clamp-2 leading-relaxed">
+                        ${escapeHtml(task.notes)}
+                      </p>
+                    ` : ''}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Bottom Row: Due Date, Priority & Status -->
+              <div class="mt-4 pt-3 border-t border-slate-100 dark:border-zinc-800/80 flex items-center justify-between gap-2">
+                <div class="flex flex-col gap-0.5">
+                  <div class="flex items-center gap-1.5 text-xs">
+                    <svg class="w-3.5 h-3.5 ${overdue ? 'text-rose-500' : 'text-slate-400 dark:text-zinc-500'}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <span class="font-medium ${overdue ? 'text-rose-600 dark:text-rose-400 font-semibold' : 'text-slate-600 dark:text-zinc-400'}">
+                      ${dueInfo.badgeText}
+                    </span>
+                  </div>
+                  <span class="text-[10px] text-slate-400 dark:text-zinc-500 font-mono">${escapeHtml(dueInfo.text.split(' (')[0])}</span>
+                </div>
+
+                <div class="flex items-center gap-2">
+                  ${renderPriorityBadge(task.priority)}
+                  ${renderStatusSelector(task.id, task.status)}
+                </div>
+              </div>
+            `;
+
+            container.appendChild(card);
+          });
+        }
+
+        // Render Table View
+        function renderTable(filteredTasks) {
+          const tbody = document.getElementById('table-body');
+          tbody.innerHTML = '';
+
+          filteredTasks.forEach(task => {
+            const isDone = task.status === 'DONE';
+            const overdue = isOverdue(task.dueDate, task.status);
+            const dueInfo = formatDueDisplay(task.dueDate);
+            const hasFiles = task.files && task.files.length > 0;
+
+            const filesHtml = hasFiles 
+              ? task.files.map((file, idx) => `
+                <button 
+                  type="button"
+                  data-action="open-file" 
+                  data-task-id="${task.id}" 
+                  data-file-idx="${idx}"
+                  class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-200 border border-slate-200/70 dark:border-zinc-700/70 transition-colors truncate max-w-[130px]"
+                  title="${escapeHtml(file.name)} (${formatFileSize(file.size)})"
+                >
+                  ${getFileIcon(file.name, file.type)}
+                  <span class="truncate">${escapeHtml(file.name)}</span>
+                </button>
+              `).join('')
+              : `<span class="text-xs text-slate-400">None</span>`;
+
+            const row = document.createElement('tr');
+            row.className = `hover:bg-slate-50/70 dark:hover:bg-zinc-800/40 transition-colors ${
+              isDone ? 'opacity-65' : ''
+            }`;
+
+            row.innerHTML = `
+              <td class="py-3 px-4 text-center">
+                <button 
+                  data-action="toggle-done" 
+                  data-task-id="${task.id}" 
+                  class="w-4 h-4 mx-auto rounded border flex items-center justify-center transition-colors ${
+                    isDone 
+                      ? 'bg-teal-600 border-teal-600 text-white' 
+                      : 'border-slate-300 dark:border-zinc-700 hover:border-teal-500 bg-transparent'
+                  }"
+                  title="${isDone ? 'Mark as Not Done' : 'Mark as Done'}"
+                >
+                  ${isDone ? `<svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg>` : ''}
+                </button>
+              </td>
+
+              <td class="py-3 px-4">
+                <div class="font-medium text-slate-900 dark:text-zinc-100 ${isDone ? 'line-through text-slate-400 dark:text-zinc-500' : ''}">
+                  ${escapeHtml(task.title)}
+                </div>
+                ${task.notes ? `<div class="text-xs text-slate-400 dark:text-zinc-500 line-clamp-1 mt-0.5">${escapeHtml(task.notes)}</div>` : ''}
+              </td>
+
+              <td class="py-3 px-4">
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  ${filesHtml}
+                </div>
+              </td>
+
+              <td class="py-3 px-4 whitespace-nowrap">
+                <div class="text-xs ${overdue ? 'text-rose-600 dark:text-rose-400 font-semibold' : 'text-slate-700 dark:text-zinc-300'}">
+                  ${dueInfo.badgeText}
+                </div>
+                <div class="text-[10px] text-slate-400 font-mono">${escapeHtml(dueInfo.text.split(' (')[0])}</div>
+              </td>
+
+              <td class="py-3 px-4 whitespace-nowrap">
+                ${renderPriorityBadge(task.priority)}
+              </td>
+
+              <td class="py-3 px-4 whitespace-nowrap">
+                ${renderStatusSelector(task.id, task.status)}
+              </td>
+
+              <td class="py-3 px-4 text-right whitespace-nowrap">
+                <div class="flex items-center justify-end gap-1">
+                  <button data-action="edit-task" data-task-id="${task.id}" class="p-1 rounded text-slate-400 hover:text-slate-700 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800" title="Edit Assignment">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                    </svg>
+                  </button>
+                  <button data-action="delete-task" data-task-id="${task.id}" class="p-1 rounded text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-slate-100 dark:hover:bg-zinc-800" title="Delete Assignment">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                </div>
+              </td>
+            `;
+
+            tbody.appendChild(row);
+          });
+        }
+
+        // Master update function
+        function updateDashboard() {
+          updateSummaryMetrics();
+
+          const filtered = getFilteredAndSortedAssignments();
+          document.getElementById('visible-count').textContent = filtered.length;
+
+          const cardsContainer = document.getElementById('cards-container');
+          const tableContainer = document.getElementById('table-container');
+          const emptyState = document.getElementById('empty-state');
+
+          if (filtered.length === 0) {
+            cardsContainer.classList.add('hidden');
+            tableContainer.classList.add('hidden');
+            emptyState.classList.remove('hidden');
+            emptyState.classList.add('flex');
+
+            const hasAnyTasks = assignments.length > 0;
+            if (hasAnyTasks) {
+              document.getElementById('empty-state-title').textContent = 'No matching assignments';
+              document.getElementById('empty-state-desc').textContent = 'Try adjusting your search keywords, subject, status, or priority filter.';
+            } else {
+              document.getElementById('empty-state-title').textContent = 'No assignments yet';
+              document.getElementById('empty-state-desc').textContent = 'Get started by adding your first coursework assignment or load sample demo tasks.';
+            }
+          } else {
+            emptyState.classList.add('hidden');
+            emptyState.classList.remove('flex');
+
+            if (activeView === 'card') {
+              cardsContainer.classList.remove('hidden');
+              tableContainer.classList.add('hidden');
+              renderCards(filtered);
+            } else {
+              cardsContainer.classList.add('hidden');
+              tableContainer.classList.remove('hidden');
+              renderTable(filtered);
+            }
+          }
+        }
+
+        // View toggle buttons
+        function setView(view) {
+          activeView = view;
+          localStorage.setItem(VIEW_KEY, view);
+
+          const cardBtn = document.getElementById('view-card-btn');
+          const tableBtn = document.getElementById('view-table-btn');
+
+          if (view === 'card') {
+            cardBtn.className = 'p-1.5 rounded-md text-slate-700 dark:text-zinc-200 bg-white dark:bg-zinc-900 shadow-xs transition-colors';
+            tableBtn.className = 'p-1.5 rounded-md text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-zinc-100 transition-colors';
+          } else {
+            cardBtn.className = 'p-1.5 rounded-md text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-zinc-100 transition-colors';
+            tableBtn.className = 'p-1.5 rounded-md text-slate-700 dark:text-zinc-200 bg-white dark:bg-zinc-900 shadow-xs transition-colors';
+          }
+
+          updateDashboard();
+        }
+
+        // File Preview Modal Controls
+        let currentPreviewFile = null;
+
+        function openFilePreview(task, fileIdx) {
+          if (!task || !task.files || !task.files[fileIdx]) return;
+          const file = task.files[fileIdx];
+          currentPreviewFile = file;
+
+          const modal = document.getElementById('preview-modal');
+          const backdrop = document.getElementById('preview-backdrop');
+          const card = document.getElementById('preview-card');
+          const body = document.getElementById('preview-body');
+
+          document.getElementById('preview-filename').textContent = file.name;
+          document.getElementById('preview-filesize').textContent = `${formatFileSize(file.size)} · ${file.type || 'File'}`;
+          document.getElementById('preview-icon-wrapper').innerHTML = getFileIcon(file.name, file.type);
+
+          const isImg = (file.type && file.type.startsWith('image/')) || /\.(png|jpg|jpeg|webp|svg|gif)$/i.test(file.name);
+          const isText = (file.type && (file.type.startsWith('text/') || file.type.includes('json') || file.type.includes('markdown'))) || /\.(txt|md|json|js|ts|py|html|css|csv)$/i.test(file.name);
+
+          if (isImg && file.data) {
+            body.innerHTML = `<img src="${file.data}" alt="${escapeHtml(file.name)}" class="max-h-[60vh] max-w-full object-contain rounded-lg shadow-xs" />`;
+          } else if (isText && file.data && file.data.startsWith('data:')) {
+            try {
+              let textContent = '';
+              if (file.data.includes(';base64,')) {
+                textContent = atob(file.data.split(';base64,')[1]);
+              } else {
+                textContent = decodeURIComponent(file.data.split(',')[1] || '');
+              }
+              body.innerHTML = `<pre class="w-full text-xs font-mono text-slate-800 dark:text-zinc-200 overflow-auto max-h-[60vh] whitespace-pre-wrap p-3 leading-relaxed">${escapeHtml(textContent.slice(0, 10000))}</pre>`;
+            } catch (err) {
+              body.innerHTML = renderGenericFileDownloadPrompt(file);
+            }
+          } else {
+            body.innerHTML = renderGenericFileDownloadPrompt(file);
+          }
+
+          modal.classList.remove('hidden');
+          requestAnimationFrame(() => {
+            backdrop.classList.remove('opacity-0');
+            card.classList.remove('opacity-0', 'scale-95');
+          });
+        }
+
+        function renderGenericFileDownloadPrompt(file) {
+          return `
+            <div class="text-center p-6 space-y-3">
+              <div class="w-12 h-12 mx-auto rounded-xl bg-slate-100 dark:bg-zinc-800 flex items-center justify-center text-teal-600 dark:text-teal-400">
+                ${getFileIcon(file.name, file.type)}
+              </div>
+              <div class="text-xs text-slate-600 dark:text-zinc-300">
+                Binary or document file (${escapeHtml(file.name)})
+              </div>
+              <p class="text-[11px] text-slate-400 dark:text-zinc-500 max-w-xs mx-auto">
+                Direct in-browser visual preview is not supported for this file type. Click download to view it on your device.
+              </p>
+            </div>
+          `;
+        }
+
+        function closeFilePreview() {
+          const modal = document.getElementById('preview-modal');
+          const backdrop = document.getElementById('preview-backdrop');
+          const card = document.getElementById('preview-card');
+
+          backdrop.classList.add('opacity-0');
+          card.classList.add('opacity-0', 'scale-95');
+
+          setTimeout(() => {
+            modal.classList.add('hidden');
+            currentPreviewFile = null;
+          }, 200);
+        }
+
+        function downloadCurrentPreviewFile() {
+          if (!currentPreviewFile) return;
+          downloadFile(currentPreviewFile);
+        }
+
+        function downloadFile(file) {
+          if (!file || !file.data) {
+            showToast('File data is not available', 'error');
+            return;
+          }
+          const a = document.createElement('a');
+          a.href = file.data;
+          a.download = file.name;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          showToast(`Downloaded "${file.name}"`);
+        }
+
+        // Modal File List Rendering
+        function renderModalFileList() {
+          const listEl = document.getElementById('modal-file-list');
+          listEl.innerHTML = '';
+
+          if (modalAttachedFiles.length === 0) {
+            listEl.innerHTML = '<div class="text-[11px] text-slate-400 dark:text-zinc-500 py-1.5 text-center italic">No files attached yet</div>';
+            return;
+          }
+
+          modalAttachedFiles.forEach((file, index) => {
+            const item = document.createElement('div');
+            item.className = 'flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-zinc-800/60 border border-slate-200/70 dark:border-zinc-700/70 text-xs';
+            item.innerHTML = `
+              <div class="flex items-center gap-2 min-w-0">
+                ${getFileIcon(file.name, file.type)}
+                <span class="truncate font-medium text-slate-700 dark:text-zinc-200">${escapeHtml(file.name)}</span>
+                <span class="text-[10px] text-slate-400 font-mono shrink-0">(${formatFileSize(file.size)})</span>
+              </div>
+              <button 
+                type="button" 
+                data-remove-file-idx="${index}" 
+                class="p-1 text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 rounded hover:bg-slate-200 dark:hover:bg-zinc-700 transition-colors" 
+                title="Remove attachment"
+              >
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            `;
+            listEl.appendChild(item);
+          });
+        }
+
+        // Process incoming files from input or drag-and-drop
+        function processAddedFiles(fileList) {
+          if (!fileList || fileList.length === 0) return;
+
+          Array.from(fileList).forEach(file => {
+            // Guard limit per file (2.5MB) to avoid blowing localStorage limits
+            if (file.size > 2.5 * 1024 * 1024) {
+              showToast(`"${file.name}" exceeds 2.5MB size limit for offline storage`, 'error');
+              return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+              const fileObj = {
+                id: 'file-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+                name: file.name,
+                size: file.size,
+                type: file.type || 'application/octet-stream',
+                data: e.target.result
+              };
+              modalAttachedFiles.push(fileObj);
+              renderModalFileList();
+            };
+            reader.readAsDataURL(file);
+          });
+        }
+
+        // Modal Controls
+        function openTaskModal(taskId = null) {
+          const modal = document.getElementById('task-modal');
+          const backdrop = document.getElementById('modal-backdrop');
+          const card = document.getElementById('modal-card');
+          const modalTitle = document.getElementById('modal-title');
+          const form = document.getElementById('task-form');
+
+          form.reset();
+
+          if (taskId) {
+            const task = assignments.find(t => t.id === taskId);
+            if (!task) return;
+            modalTitle.textContent = 'Edit Assignment';
+            document.getElementById('task-id').value = task.id;
+            document.getElementById('input-title').value = task.title;
+            document.getElementById('input-priority').value = task.priority || 'MEDIUM';
+            document.getElementById('input-due-date').value = task.dueDate;
+            document.getElementById('input-status').value = task.status || 'TO_DO';
+            document.getElementById('input-notes').value = task.notes || '';
+            modalAttachedFiles = (task.files && Array.isArray(task.files)) ? JSON.parse(JSON.stringify(task.files)) : [];
+          } else {
+            modalTitle.textContent = 'Add Assignment';
+            document.getElementById('task-id').value = '';
+            modalAttachedFiles = [];
+            
+            // Set default due date to tomorrow at 23:59
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            tomorrow.setHours(23, 59, 0, 0);
+            const formatted = tomorrow.toISOString().slice(0, 16);
+            document.getElementById('input-due-date').value = formatted;
+          }
+
+          renderModalFileList();
+
+          modal.classList.remove('hidden');
+          requestAnimationFrame(() => {
+            backdrop.classList.remove('opacity-0');
+            card.classList.remove('opacity-0', 'scale-95');
+          });
+
+          setTimeout(() => document.getElementById('input-title').focus(), 50);
+        }
+
+        function closeTaskModal() {
+          const modal = document.getElementById('task-modal');
+          const backdrop = document.getElementById('modal-backdrop');
+          const card = document.getElementById('modal-card');
+
+          backdrop.classList.add('opacity-0');
+          card.classList.add('opacity-0', 'scale-95');
+
+          setTimeout(() => {
+            modal.classList.add('hidden');
+            modalAttachedFiles = [];
+            document.getElementById('input-files').value = '';
+          }, 200);
+        }
+
+        // Delete Modal Controls
+        function openDeleteModal(taskId) {
+          const task = assignments.find(t => t.id === taskId);
+          if (!task) return;
+          pendingDeleteId = taskId;
+
+          document.getElementById('delete-task-name').textContent = `Are you sure you want to delete "${task.title}"? This cannot be undone.`;
+          
+          const modal = document.getElementById('delete-modal');
+          const backdrop = document.getElementById('delete-backdrop');
+          const card = document.getElementById('delete-card');
+
+          modal.classList.remove('hidden');
+          requestAnimationFrame(() => {
+            backdrop.classList.remove('opacity-0');
+            card.classList.remove('opacity-0', 'scale-95');
+          });
+        }
+
+        function closeDeleteModal() {
+          const modal = document.getElementById('delete-modal');
+          const backdrop = document.getElementById('delete-backdrop');
+          const card = document.getElementById('delete-card');
+
+          backdrop.classList.add('opacity-0');
+          card.classList.add('opacity-0', 'scale-95');
+
+          setTimeout(() => {
+            modal.classList.add('hidden');
+            pendingDeleteId = null;
+          }, 200);
+        }
+
+        // Import Modal Controls
+        function openImportModal(importedList) {
+          pendingImportData = importedList;
+          document.getElementById('import-summary-text').textContent = `Found ${importedList.length} valid assignment(s) ready to import.`;
+
+          const modal = document.getElementById('import-modal');
+          const backdrop = document.getElementById('import-backdrop');
+          const card = document.getElementById('import-card');
+
+          modal.classList.remove('hidden');
+          requestAnimationFrame(() => {
+            backdrop.classList.remove('opacity-0');
+            card.classList.remove('opacity-0', 'scale-95');
+          });
+        }
+
+        function closeImportModal() {
+          const modal = document.getElementById('import-modal');
+          const backdrop = document.getElementById('import-backdrop');
+          const card = document.getElementById('import-card');
+
+          backdrop.classList.add('opacity-0');
+          card.classList.add('opacity-0', 'scale-95');
+
+          setTimeout(() => {
+            modal.classList.add('hidden');
+            pendingImportData = null;
+            document.getElementById('import-file-input').value = '';
+          }, 200);
+        }
+
+        // Export Data JSON
+        function exportDataJSON() {
+          const backupPayload = {
+            appName: 'Assignment Tracker Dashboard',
+            version: '1.0',
+            exportedAt: new Date().toISOString(),
+            totalAssignments: assignments.length,
+            assignments: assignments
+          };
+
+          const jsonStr = JSON.stringify(backupPayload, null, 2);
+          const blob = new Blob([jsonStr], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const dateStr = new Date().toISOString().slice(0, 10);
+
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `assignments-backup-${dateStr}.json`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+
+          showToast(`Exported ${assignments.length} assignments as JSON`);
+        }
+
+        // Import File Handler
+        function handleFileImport(e) {
+          const file = e.target.files && e.target.files[0];
+          if (!file) return;
+
+          const reader = new FileReader();
+          reader.onload = function(evt) {
+            try {
+              const content = evt.target.result;
+              const parsed = JSON.parse(content);
+              let taskList = [];
+
+              if (Array.isArray(parsed)) {
+                taskList = parsed;
+              } else if (parsed && Array.isArray(parsed.assignments)) {
+                taskList = parsed.assignments;
+              } else {
+                throw new Error('Invalid file structure. Must contain assignments array.');
+              }
+
+              // Basic sanitize
+              const validTasks = taskList.filter(item => item && typeof item === 'object' && item.title && item.dueDate);
+              if (validTasks.length === 0) {
+                showToast('No valid assignments found in this JSON file', 'error');
+                return;
+              }
+
+              openImportModal(validTasks);
+            } catch (err) {
+              console.error('Import parse error:', err);
+              showToast('Invalid JSON file format', 'error');
+            }
+          };
+
+          reader.onerror = function() {
+            showToast('Failed to read file', 'error');
+          };
+
+          reader.readAsText(file);
+        }
+
+        // Utility: HTML Escaping
+        function escapeHtml(str) {
+          if (!str) return '';
+          return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+        }
+
+        // Attach Event Listeners
+        function setupEventListeners() {
+          // Add Task Button
+          document.getElementById('btn-add-task').addEventListener('click', () => openTaskModal());
+          document.getElementById('empty-action-add').addEventListener('click', () => openTaskModal());
+
+          // Modal Close Buttons
+          document.getElementById('modal-close-btn').addEventListener('click', closeTaskModal);
+          document.getElementById('modal-cancel-btn').addEventListener('click', closeTaskModal);
+          document.getElementById('modal-backdrop').addEventListener('click', closeTaskModal);
+
+          // Form Submit (Add / Edit)
+          document.getElementById('task-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const id = document.getElementById('task-id').value;
+            const title = document.getElementById('input-title').value.trim();
+            const priority = document.getElementById('input-priority').value;
+            const dueDate = document.getElementById('input-due-date').value;
+            const status = document.getElementById('input-status').value;
+            const notes = document.getElementById('input-notes').value.trim();
+
+            if (!title || !dueDate) {
+              showToast('Please enter title and due date', 'error');
+              return;
+            }
+
+            if (id) {
+              // Update existing
+              const index = assignments.findIndex(t => t.id === id);
+              if (index !== -1) {
+                assignments[index] = {
+                  ...assignments[index],
+                  title,
+                  priority,
+                  dueDate,
+                  status,
+                  notes,
+                  files: [...modalAttachedFiles],
+                  updatedAt: Date.now()
+                };
+                showToast(`Updated "${title}"`);
+              }
+            } else {
+              // Create new
+              const newTask = {
+                id: 'task-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7),
+                title,
+                priority,
+                dueDate,
+                status,
+                notes,
+                files: [...modalAttachedFiles],
+                createdAt: Date.now()
+              };
+              assignments.unshift(newTask);
+              showToast(`Added "${title}"`);
+            }
+
+            saveAssignments();
+            closeTaskModal();
+          });
+
+          // File Dropzone & Input Listeners
+          const dropzone = document.getElementById('file-dropzone');
+          const fileInput = document.getElementById('input-files');
+
+          dropzone.addEventListener('click', () => fileInput.click());
+
+          fileInput.addEventListener('change', (e) => {
+            processAddedFiles(e.target.files);
+            fileInput.value = '';
+          });
+
+          dropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropzone.classList.add('border-teal-500', 'bg-teal-50/20', 'dark:bg-teal-950/20');
+          });
+
+          dropzone.addEventListener('dragleave', () => {
+            dropzone.classList.remove('border-teal-500', 'bg-teal-50/20', 'dark:bg-teal-950/20');
+          });
+
+          dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropzone.classList.remove('border-teal-500', 'bg-teal-50/20', 'dark:bg-teal-950/20');
+            if (e.dataTransfer && e.dataTransfer.files) {
+              processAddedFiles(e.dataTransfer.files);
+            }
+          });
+
+          // Modal File List Remove Button delegation
+          document.getElementById('modal-file-list').addEventListener('click', (e) => {
+            const removeBtn = e.target.closest('button[data-remove-file-idx]');
+            if (!removeBtn) return;
+            const idx = parseInt(removeBtn.dataset.removeFileIdx, 10);
+            if (!isNaN(idx) && idx >= 0 && idx < modalAttachedFiles.length) {
+              modalAttachedFiles.splice(idx, 1);
+              renderModalFileList();
+            }
+          });
+
+          // Preview Modal Controls
+          document.getElementById('preview-close-btn').addEventListener('click', closeFilePreview);
+          document.getElementById('preview-backdrop').addEventListener('click', closeFilePreview);
+          document.getElementById('preview-download-btn').addEventListener('click', downloadCurrentPreviewFile);
+
+          // Delete Confirmation Modal
+          document.getElementById('delete-cancel-btn').addEventListener('click', closeDeleteModal);
+          document.getElementById('delete-backdrop').addEventListener('click', closeDeleteModal);
+          document.getElementById('delete-confirm-btn').addEventListener('click', () => {
+            if (pendingDeleteId) {
+              const target = assignments.find(t => t.id === pendingDeleteId);
+              const title = target ? target.title : 'Task';
+              assignments = assignments.filter(t => t.id !== pendingDeleteId);
+              saveAssignments();
+              showToast(`Deleted "${title}"`);
+              closeDeleteModal();
+            }
+          });
+
+          // Import Confirmation
+          document.getElementById('import-cancel-btn').addEventListener('click', closeImportModal);
+          document.getElementById('import-backdrop').addEventListener('click', closeImportModal);
+          document.getElementById('import-confirm-btn').addEventListener('click', () => {
+            if (!pendingImportData) return;
+            const mode = document.querySelector('input[name="import-mode"]:checked').value;
+
+            if (mode === 'replace') {
+              assignments = pendingImportData.map(t => ({
+                ...t,
+                id: t.id || ('task-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7))
+              }));
+              showToast(`Replaced dashboard with ${assignments.length} assignments`);
+            } else {
+              // Merge
+              const existingMap = new Map(assignments.map(t => [t.id, t]));
+              let addedCount = 0;
+              let updatedCount = 0;
+
+              pendingImportData.forEach(item => {
+                const taskId = item.id || ('task-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7));
+                if (existingMap.has(taskId)) {
+                  existingMap.set(taskId, { ...existingMap.get(taskId), ...item });
+                  updatedCount++;
+                } else {
+                  existingMap.set(taskId, { ...item, id: taskId });
+                  addedCount++;
+                }
+              });
+
+              assignments = Array.from(existingMap.values());
+              showToast(`Merged: ${addedCount} added, ${updatedCount} updated`);
+            }
+
+            saveAssignments();
+            closeImportModal();
+          });
+
+          // Backup Menu Toggle
+          const backupBtn = document.getElementById('backup-menu-btn');
+          const backupDropdown = document.getElementById('backup-dropdown');
+
+          backupBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            backupDropdown.classList.toggle('hidden');
+          });
+
+          document.addEventListener('click', (e) => {
+            if (!backupDropdown.contains(e.target) && !backupBtn.contains(e.target)) {
+              backupDropdown.classList.add('hidden');
+            }
+          });
+
+          // Export Button
+          document.getElementById('btn-export-json').addEventListener('click', () => {
+            backupDropdown.classList.add('hidden');
+            exportDataJSON();
+          });
+
+          // File Input change
+          document.getElementById('import-file-input').addEventListener('change', handleFileImport);
+
+          // Load Sample Tasks
+          const loadSampleHandler = () => {
+            backupDropdown.classList.add('hidden');
+            assignments = [...SAMPLE_ASSIGNMENTS];
+            saveAssignments();
+            showToast('Sample assignments loaded');
+          };
+          document.getElementById('btn-load-sample').addEventListener('click', loadSampleHandler);
+          document.getElementById('empty-action-sample').addEventListener('click', loadSampleHandler);
+
+          // Clear All Tasks
+          document.getElementById('btn-clear-all').addEventListener('click', () => {
+            backupDropdown.classList.add('hidden');
+            if (assignments.length === 0) {
+              showToast('Dashboard is already empty', 'info');
+              return;
+            }
+            if (confirm('Are you sure you want to clear all assignment records? Make sure you have exported a backup if needed.')) {
+              assignments = [];
+              saveAssignments();
+              showToast('All assignments cleared');
+            }
+          });
+
+          // Search & Filters change listeners
+          const searchInput = document.getElementById('search-input');
+          const clearSearchBtn = document.getElementById('clear-search-btn');
+
+          searchInput.addEventListener('input', () => {
+            if (searchInput.value.length > 0) {
+              clearSearchBtn.classList.remove('hidden');
+            } else {
+              clearSearchBtn.classList.add('hidden');
+            }
+            updateDashboard();
+          });
+
+          clearSearchBtn.addEventListener('click', () => {
+            searchInput.value = '';
+            clearSearchBtn.classList.add('hidden');
+            updateDashboard();
+            searchInput.focus();
+          });
+
+          document.getElementById('filter-files').addEventListener('change', updateDashboard);
+          document.getElementById('filter-status').addEventListener('change', updateDashboard);
+          document.getElementById('filter-priority').addEventListener('change', updateDashboard);
+          document.getElementById('sort-by').addEventListener('change', updateDashboard);
+
+          document.getElementById('reset-filters-btn').addEventListener('click', () => {
+            searchInput.value = '';
+            clearSearchBtn.classList.add('hidden');
+            document.getElementById('filter-files').value = 'ALL';
+            document.getElementById('filter-status').value = 'ALL';
+            document.getElementById('filter-priority').value = 'ALL';
+            document.getElementById('sort-by').value = 'DUE_ASC';
+            updateDashboard();
+          });
+
+          // View toggles
+          document.getElementById('view-card-btn').addEventListener('click', () => setView('card'));
+          document.getElementById('view-table-btn').addEventListener('click', () => setView('table'));
+
+          // Global Event Delegation for Cards & Table actions
+          document.getElementById('tasks-section').addEventListener('click', (e) => {
+            const btn = e.target.closest('button[data-action]');
+            if (!btn) return;
+
+            const action = btn.dataset.action;
+            const taskId = btn.dataset.taskId;
+
+            if (action === 'toggle-done') {
+              const task = assignments.find(t => t.id === taskId);
+              if (task) {
+                task.status = task.status === 'DONE' ? 'TO_DO' : 'DONE';
+                saveAssignments();
+                showToast(task.status === 'DONE' ? `Completed: "${task.title}"` : `Reopened: "${task.title}"`);
+              }
+            } else if (action === 'open-file') {
+              const fileIdx = parseInt(btn.dataset.fileIdx, 10);
+              const task = assignments.find(t => t.id === taskId);
+              if (task && task.files && task.files[fileIdx]) {
+                openFilePreview(task, fileIdx);
+              }
+            } else if (action === 'edit-task') {
+              openTaskModal(taskId);
+            } else if (action === 'delete-task') {
+              openDeleteModal(taskId);
+            }
+          });
+
+          // Quick status dropdown changer
+          document.getElementById('tasks-section').addEventListener('change', (e) => {
+            const select = e.target.closest('select[data-action="quick-status"]');
+            if (!select) return;
+
+            const taskId = select.dataset.taskId;
+            const newStatus = select.value;
+            const task = assignments.find(t => t.id === taskId);
+            if (task) {
+              task.status = newStatus;
+              saveAssignments();
+              showToast(`Status changed to ${newStatus.replace('_', ' ')}`);
+            }
+          });
+
+          // Keyboard Shortcuts
+          window.addEventListener('keydown', (e) => {
+            // Close modals with Escape
+            if (e.key === 'Escape') {
+              closeTaskModal();
+              closeDeleteModal();
+              closeImportModal();
+              closeFilePreview();
+              backupDropdown.classList.add('hidden');
+            }
+            // Quick add with 'n' or '/' to focus search if not in input
+            if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA' && e.target.tagName !== 'SELECT') {
+              if (e.key === 'n' || e.key === 'N') {
+                e.preventDefault();
+                openTaskModal();
+              } else if (e.key === '/') {
+                e.preventDefault();
+                document.getElementById('search-input').focus();
+              }
+            }
+          });
+        }
+
+        // Initialize App
+        function init() {
+          initTheme();
+          loadAssignments();
+          setupEventListeners();
+          setView(activeView);
+        }
+
+        // Start on DOM ready
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', init);
+        } else {
+          init();
+        }
+      })();
+    </script>
+  </body>
+</html>

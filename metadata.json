@@ -1,0 +1,6 @@
+{
+  "name": "Assignment Tracker Web Dashboard",
+  "description": "An interactive, single-file assignment and homework tracker web dashboard with local storage persistence, filtering, sorting, summary metrics, and backup import/export.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

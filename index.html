@@ -76,7 +76,7 @@
   <body class="min-h-screen bg-slate-50 text-slate-900 dark:bg-zinc-950 dark:text-zinc-100 font-sans antialiased transition-colors duration-200">
     
     <!-- Toast Container -->
-    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2.5 max-w-sm pointer-events-none" aria-live="polite"></div>
+    <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2.5 max-w-sm pointer-events-none" aria-live="polite"></div>
 
     <!-- Main App Container -->
     <div class="min-h-screen flex flex-col">
@@ -165,6 +165,15 @@
                 </button>
               </div>
             </div>
+
+            <!-- Gemini AI Automator Button -->
+            <button id="btn-toggle-chat" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-purple-700 dark:text-purple-300 bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/40 dark:hover:bg-purple-900/40 border border-purple-200 dark:border-purple-800/60 rounded-lg shadow-2xs transition-colors focus:ring-2 focus:ring-purple-500">
+              <svg class="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              <span>AI Automator</span>
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
+            </button>
 
             <!-- New Task Button -->
             <button id="btn-add-task" class="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-medium text-white bg-teal-600 hover:bg-teal-700 dark:bg-teal-500 dark:hover:bg-teal-600 rounded-lg shadow-sm transition-colors focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 dark:focus:ring-offset-zinc-950">
@@ -651,6 +660,119 @@
         </div>
         <div id="preview-body" class="mt-4 flex-1 overflow-auto flex items-center justify-center min-h-[200px] bg-slate-50 dark:bg-zinc-950 rounded-xl p-3 border border-slate-100 dark:border-zinc-800/80">
           <!-- preview content -->
+        </div>
+      </div>
+    </div>
+
+    <!-- 6.8. Floating Gemini Chatbot Trigger Button -->
+    <button id="floating-chat-btn" class="fixed bottom-5 right-5 z-40 flex items-center gap-2 px-3.5 py-2.5 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all text-xs font-medium cursor-pointer" title="Open Gemini Coursework Automator">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+      </svg>
+      <span>Ask Gemini</span>
+    </button>
+
+    <!-- 6.9. Gemini Coursework Automator Drawer / Slide-Over -->
+    <div id="chat-drawer" class="hidden fixed inset-0 z-50 overflow-hidden">
+      <!-- Backdrop -->
+      <div id="chat-backdrop" class="modal-backdrop fixed inset-0 bg-slate-900/50 dark:bg-black/70 backdrop-blur-xs opacity-0 transition-opacity duration-200"></div>
+
+      <!-- Drawer Content Container -->
+      <div class="fixed inset-y-0 right-0 max-w-full flex pl-6 sm:pl-10">
+        <div id="chat-panel" class="w-screen max-w-md bg-white dark:bg-zinc-900 border-l border-slate-200 dark:border-zinc-800 shadow-2xl flex flex-col transform translate-x-full transition-transform duration-300 ease-out">
+          
+          <!-- Drawer Header -->
+          <div class="p-4 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between gap-3 bg-slate-50/70 dark:bg-zinc-950/50">
+            <div class="flex items-center gap-2.5 min-w-0">
+              <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-purple-600 to-indigo-500 text-white flex items-center justify-center shrink-0 shadow-xs">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </div>
+              <div class="min-w-0">
+                <div class="flex items-center gap-1.5">
+                  <h3 class="text-xs font-semibold text-slate-900 dark:text-zinc-100">Gemini Automator</h3>
+                  <span class="text-[10px] font-mono px-1 py-0.2 rounded bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300">AI</span>
+                </div>
+                <p class="text-[11px] text-slate-500 dark:text-zinc-400 truncate">Automate coursework, milestones & deadlines</p>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-1">
+              <button id="btn-clear-chat" class="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors" title="Clear conversation history">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+              <button id="btn-close-chat" class="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors" title="Close chat">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Model / Speed Tier Selector -->
+          <div class="px-4 py-2 border-b border-slate-100 dark:border-zinc-800/80 bg-slate-50/40 dark:bg-zinc-950/40 flex items-center justify-between gap-2 text-[11px]">
+            <label for="chat-model-select" class="text-slate-500 dark:text-zinc-400 font-medium shrink-0 flex items-center gap-1">
+              <svg class="w-3.5 h-3.5 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+              </svg>
+              <span>Model Tier:</span>
+            </label>
+            <select id="chat-model-select" class="flex-1 py-1 pl-2 pr-6 bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700/80 rounded-md text-slate-800 dark:text-zinc-200 text-xs focus:outline-none focus:ring-1 focus:ring-purple-500">
+              <option value="gemini-3.5-flash" selected>gemini-3.5-flash (General · Default)</option>
+              <option value="gemini-3.1-flash-lite">gemini-3.1-flash-lite (Fast Tasks)</option>
+              <option value="gemini-3.1-pro-preview">gemini-3.1-pro-preview (Complex Tasks)</option>
+            </select>
+          </div>
+
+          <!-- Scrollable Messages Thread -->
+          <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-3.5">
+            <!-- Dynamic messages injected here -->
+          </div>
+
+          <!-- Quick Suggestion Action Chips -->
+          <div id="chat-suggestions" class="px-3.5 py-2 border-t border-slate-100 dark:border-zinc-800/60 bg-slate-50/40 dark:bg-zinc-950/40 flex items-center gap-1.5 overflow-x-auto text-[11px]">
+            <button type="button" class="chat-chip shrink-0 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-zinc-800 hover:bg-purple-100 dark:hover:bg-purple-950/60 text-slate-700 dark:text-zinc-300 hover:text-purple-700 dark:hover:text-purple-300 border border-slate-200/80 dark:border-zinc-700/60 transition-colors">
+              + Add assignment due next Friday
+            </button>
+            <button type="button" class="chat-chip shrink-0 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-zinc-800 hover:bg-purple-100 dark:hover:bg-purple-950/60 text-slate-700 dark:text-zinc-300 hover:text-purple-700 dark:hover:text-purple-300 border border-slate-200/80 dark:border-zinc-700/60 transition-colors">
+              Break down Raft Consensus Lab
+            </button>
+            <button type="button" class="chat-chip shrink-0 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-zinc-800 hover:bg-purple-100 dark:hover:bg-purple-950/60 text-slate-700 dark:text-zinc-300 hover:text-purple-700 dark:hover:text-purple-300 border border-slate-200/80 dark:border-zinc-700/60 transition-colors">
+              What requires my attention today?
+            </button>
+          </div>
+
+          <!-- Chat Input Area -->
+          <div class="p-3 border-t border-slate-100 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+            <form id="chat-form" class="flex items-end gap-2">
+              <textarea 
+                id="chat-input" 
+                rows="1" 
+                placeholder="Ask Gemini to add, break down, or automate tasks..." 
+                class="flex-1 max-h-32 px-3 py-2 text-xs bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl text-slate-900 dark:text-zinc-100 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-purple-500 resize-none leading-relaxed"
+              ></textarea>
+              <button 
+                type="submit" 
+                id="chat-send-btn" 
+                class="p-2 text-white bg-purple-600 hover:bg-purple-700 dark:bg-purple-500 dark:hover:bg-purple-600 rounded-xl shadow-xs transition-colors shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
+                title="Send (Enter)"
+              >
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                </svg>
+              </button>
+            </form>
+            <div class="mt-1.5 flex items-center justify-between text-[10px] text-slate-400 dark:text-zinc-500 px-1">
+              <span>Enter to send · Shift+Enter for newline</span>
+              <span class="flex items-center gap-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                <span>Dashboard Sync Active</span>
+              </span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -1721,6 +1843,416 @@
             .replace(/'/g, '&#039;');
         }
 
+        // ==========================================
+        // Gemini Coursework Automator Chat Logic
+        // ==========================================
+        const CHAT_STORAGE_KEY = 'assignment_tracker_chat_v1';
+        let chatMessages = [];
+        let isGeneratingChat = false;
+
+        const WELCOME_CHAT_MESSAGE = {
+          id: 'welcome-msg',
+          role: 'model',
+          text: "👋 **Hi! I'm Gemini**, your coursework automator.\n\nI can directly manage and automate your assignment dashboard:\n- **Add tasks**: *\"Add Physics lab report due next Friday at 5 PM with High priority\"*\n- **Break down projects**: *\"Break down my Raft Consensus lab into 3 progressive milestone tasks\"*\n- **Batch & Status Updates**: *\"Mark all overdue assignments as In Progress\"*\n- **Workload Analysis**: *\"What is due this week and what needs urgent attention?\"*\n\nTell me what you'd like to automate or organize!",
+          timestamp: Date.now(),
+        };
+
+        function loadChatHistory() {
+          try {
+            const raw = localStorage.getItem(CHAT_STORAGE_KEY);
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                chatMessages = parsed;
+                return;
+              }
+            }
+          } catch (e) {
+            console.error('Failed to load chat history', e);
+          }
+          chatMessages = [WELCOME_CHAT_MESSAGE];
+          saveChatHistory();
+        }
+
+        function saveChatHistory() {
+          try {
+            localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(chatMessages));
+          } catch (e) {
+            console.error('Failed to save chat history', e);
+          }
+        }
+
+        function formatChatMarkdown(text) {
+          if (!text) return '';
+          let html = escapeHtml(text);
+          // Bold
+          html = html.replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-slate-900 dark:text-zinc-100">$1</strong>');
+          // Italic
+          html = html.replace(/\*(.*?)\*/g, '<em class="italic">$1</em>');
+          // Inline code
+          html = html.replace(/`(.*?)`/g, '<code class="px-1 py-0.5 rounded bg-slate-100 dark:bg-zinc-800 text-[11px] font-mono text-purple-600 dark:text-purple-400">$1</code>');
+          // Bullet points
+          html = html.replace(/^[•*-]\s+(.+)$/gm, '<li class="ml-3 list-disc">$1</li>');
+          // Newlines
+          html = html.replace(/\n\n/g, '<br/><br/>').replace(/\n/g, '<br/>');
+          return html;
+        }
+
+        function renderChatMessages() {
+          const container = document.getElementById('chat-messages');
+          if (!container) return;
+          container.innerHTML = '';
+
+          chatMessages.forEach((msg) => {
+            const isUser = msg.role === 'user';
+            const wrapper = document.createElement('div');
+            wrapper.className = `flex flex-col ${isUser ? 'items-end' : 'items-start'} space-y-1.5`;
+
+            const bubble = document.createElement('div');
+            bubble.className = `max-w-[85%] rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed ${
+              isUser
+                ? 'bg-purple-600 text-white rounded-br-xs shadow-xs'
+                : 'bg-slate-100 dark:bg-zinc-800/80 text-slate-800 dark:text-zinc-200 rounded-bl-xs border border-slate-200/60 dark:border-zinc-700/60'
+            }`;
+
+            // Model header with badge
+            let headerHtml = '';
+            if (!isUser) {
+              headerHtml = `
+                <div class="flex items-center gap-1.5 mb-1.5 text-[10px] text-purple-600 dark:text-purple-400 font-medium">
+                  <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                  <span>Gemini Assistant</span>
+                  ${msg.modelUsed ? `<span class="text-slate-400 dark:text-zinc-500 font-mono">(${escapeHtml(msg.modelUsed)})</span>` : ''}
+                </div>
+              `;
+            }
+
+            // Automated actions cards if present
+            let actionsHtml = '';
+            if (msg.automatedActions && msg.automatedActions.length > 0) {
+              actionsHtml = `
+                <div class="mt-2.5 pt-2 border-t border-purple-200/60 dark:border-purple-800/40 space-y-1.5">
+                  <div class="flex items-center gap-1 text-[10px] font-semibold text-teal-600 dark:text-teal-400 uppercase tracking-wider">
+                    <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span>Automated Dashboard Actions Executed</span>
+                  </div>
+                  ${msg.automatedActions.map(act => `
+                    <div class="p-2 rounded-lg bg-white/80 dark:bg-zinc-900/80 border border-slate-200/80 dark:border-zinc-700/60 text-[11px]">
+                      <div class="font-medium text-slate-900 dark:text-zinc-100 flex items-center justify-between">
+                        <span>${escapeHtml(act.summary)}</span>
+                        ${act.badge ? `<span class="text-[10px] px-1.5 py-0.5 rounded bg-teal-50 dark:bg-teal-950/60 text-teal-600 dark:text-teal-400 font-mono">${escapeHtml(act.badge)}</span>` : ''}
+                      </div>
+                      ${act.details ? `<div class="text-[10px] text-slate-500 dark:text-zinc-400 mt-0.5">${escapeHtml(act.details)}</div>` : ''}
+                    </div>
+                  `).join('')}
+                </div>
+              `;
+            }
+
+            bubble.innerHTML = `${headerHtml}<div>${formatChatMarkdown(msg.text)}</div>${actionsHtml}`;
+            wrapper.appendChild(bubble);
+
+            // Timestamp
+            const timeSpan = document.createElement('span');
+            timeSpan.className = 'text-[9px] text-slate-400 dark:text-zinc-500 px-1 font-mono';
+            const timeObj = new Date(msg.timestamp || Date.now());
+            timeSpan.textContent = timeObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            wrapper.appendChild(timeSpan);
+
+            container.appendChild(wrapper);
+          });
+
+          container.scrollTop = container.scrollHeight;
+        }
+
+        function renderThinkingIndicator() {
+          const container = document.getElementById('chat-messages');
+          if (!container) return;
+          const indicator = document.createElement('div');
+          indicator.id = 'chat-thinking-indicator';
+          indicator.className = 'flex items-center gap-2 max-w-[85%] rounded-2xl rounded-bl-xs px-3.5 py-2.5 bg-slate-100 dark:bg-zinc-800/80 border border-slate-200/60 dark:border-zinc-700/60 text-xs text-slate-500 dark:text-zinc-400';
+          indicator.innerHTML = `
+            <svg class="w-3.5 h-3.5 text-purple-600 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+            </svg>
+            <span class="font-medium animate-pulse">Gemini is thinking & automating...</span>
+          `;
+          container.appendChild(indicator);
+          container.scrollTop = container.scrollHeight;
+        }
+
+        function removeThinkingIndicator() {
+          const el = document.getElementById('chat-thinking-indicator');
+          if (el) el.remove();
+        }
+
+        // Action Execution Engine: Executes AI function calls on the user's dashboard
+        function executeAutomatedAction(name, args) {
+          const actionsLog = [];
+
+          if (name === 'create_assignment') {
+            const newTask = {
+              id: 'task-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7),
+              title: args.title || 'Untitled Assignment',
+              dueDate: args.dueDate || new Date(Date.now() + 86400000).toISOString().slice(0, 16),
+              priority: (args.priority || 'MEDIUM').toUpperCase(),
+              status: (args.status || 'TO_DO').toUpperCase(),
+              notes: args.notes || '',
+              files: [],
+              createdAt: Date.now(),
+            };
+            assignments.unshift(newTask);
+            saveAssignments();
+            showToast(`Automated: Added "${newTask.title}"`);
+            actionsLog.push({
+              summary: `Created: "${newTask.title}"`,
+              badge: `${newTask.priority} Priority`,
+              details: `Due: ${newTask.dueDate.replace('T', ' ')} · Status: ${newTask.status}`,
+            });
+          } else if (name === 'batch_create_assignments') {
+            const list = args.assignments || [];
+            let count = 0;
+            list.forEach((item, index) => {
+              const newTask = {
+                id: 'task-' + (Date.now() + index) + '-' + Math.random().toString(36).substring(2, 7),
+                title: item.title || `Milestone ${index + 1}`,
+                dueDate: item.dueDate || new Date(Date.now() + 86400000 * (index + 1)).toISOString().slice(0, 16),
+                priority: (item.priority || 'MEDIUM').toUpperCase(),
+                status: (item.status || 'TO_DO').toUpperCase(),
+                notes: item.notes || '',
+                files: [],
+                createdAt: Date.now(),
+              };
+              assignments.unshift(newTask);
+              count++;
+            });
+            saveAssignments();
+            showToast(`Automated: Added ${count} milestone tasks`);
+            actionsLog.push({
+              summary: `Batch Created ${count} Assignments / Milestones`,
+              badge: `${count} Tasks`,
+              details: list.map(t => t.title).slice(0, 3).join(', ') + (list.length > 3 ? '...' : ''),
+            });
+          } else if (name === 'update_assignment_status') {
+            const targetId = args.id;
+            let target = assignments.find(t => t.id === targetId);
+            if (!target && args.title) {
+              target = assignments.find(t => t.title.toLowerCase().includes(args.title.toLowerCase()));
+            }
+            if (target) {
+              if (args.newStatus) target.status = args.newStatus.toUpperCase();
+              if (args.priority) target.priority = args.priority.toUpperCase();
+              if (args.dueDate) target.dueDate = args.dueDate;
+              target.updatedAt = Date.now();
+              saveAssignments();
+              showToast(`Automated: Updated "${target.title}"`);
+              actionsLog.push({
+                summary: `Updated: "${target.title}"`,
+                badge: target.status,
+                details: `Status set to ${target.status}`,
+              });
+            }
+          } else if (name === 'delete_assignment') {
+            const targetId = args.id;
+            const target = assignments.find(t => t.id === targetId);
+            const title = target ? target.title : args.title || 'Task';
+            assignments = assignments.filter(t => t.id !== targetId);
+            saveAssignments();
+            showToast(`Automated: Deleted "${title}"`);
+            actionsLog.push({
+              summary: `Deleted: "${title}"`,
+              badge: 'Deleted',
+              details: 'Removed from dashboard',
+            });
+          } else if (name === 'bulk_update_assignments') {
+            const filter = args.filter;
+            const newStatus = (args.newStatus || 'IN_PROGRESS').toUpperCase();
+            let count = 0;
+            const now = Date.now();
+
+            assignments.forEach(task => {
+              let match = false;
+              if (filter === 'ALL_OVERDUE') {
+                match = task.status !== 'DONE' && new Date(task.dueDate).getTime() < now;
+              } else if (filter === 'ALL_TODO') {
+                match = task.status === 'TO_DO';
+              } else if (filter === 'ALL_IN_PROGRESS') {
+                match = task.status === 'IN_PROGRESS';
+              }
+              if (match) {
+                task.status = newStatus;
+                task.updatedAt = Date.now();
+                count++;
+              }
+            });
+
+            if (count > 0) {
+              saveAssignments();
+              showToast(`Automated: Bulk updated ${count} tasks to ${newStatus}`);
+              actionsLog.push({
+                summary: `Bulk Updated ${count} Tasks`,
+                badge: `${newStatus}`,
+                details: `Filter condition: ${filter}`,
+              });
+            }
+          }
+
+          return actionsLog;
+        }
+
+        async function sendChatMessage(customPrompt = null) {
+          if (isGeneratingChat) return;
+          const inputEl = document.getElementById('chat-input');
+          const messageText = (customPrompt || inputEl.value).trim();
+          if (!messageText) return;
+
+          if (!customPrompt) {
+            inputEl.value = '';
+            inputEl.style.height = 'auto';
+          }
+
+          // Add user message
+          const userMsg = {
+            id: 'msg-' + Date.now(),
+            role: 'user',
+            text: messageText,
+            timestamp: Date.now(),
+          };
+          chatMessages.push(userMsg);
+          saveChatHistory();
+          renderChatMessages();
+
+          isGeneratingChat = true;
+          const sendBtn = document.getElementById('chat-send-btn');
+          if (sendBtn) sendBtn.disabled = true;
+          renderThinkingIndicator();
+
+          try {
+            const modelSelect = document.getElementById('chat-model-select');
+            const selectedModel = modelSelect ? modelSelect.value : 'gemini-3.5-flash';
+
+            // Send past 12 messages for conversation context
+            const payload = {
+              messages: chatMessages.slice(-12).map(m => ({
+                role: m.role,
+                text: m.text,
+              })),
+              assignments: assignments.map(a => ({
+                id: a.id,
+                title: a.title,
+                dueDate: a.dueDate,
+                priority: a.priority,
+                status: a.status,
+                notes: a.notes,
+                files: (a.files || []).map(f => f.name),
+              })),
+              modelPreference: selectedModel,
+            };
+
+            const response = await fetch('/api/chat', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload),
+            });
+
+            const data = await response.json();
+            removeThinkingIndicator();
+
+            if (!response.ok || data.error) {
+              const errorText = data.error || 'Failed to get response from Gemini.';
+              const errorMsg = {
+                id: 'msg-' + Date.now(),
+                role: 'model',
+                text: `⚠️ **Error**: ${errorText}`,
+                timestamp: Date.now(),
+              };
+              chatMessages.push(errorMsg);
+              saveChatHistory();
+              renderChatMessages();
+              return;
+            }
+
+            // Execute any automated function calls
+            const executedActions = [];
+            if (data.functionCalls && Array.isArray(data.functionCalls)) {
+              data.functionCalls.forEach(call => {
+                const logs = executeAutomatedAction(call.name, call.args);
+                executedActions.push(...logs);
+              });
+            }
+
+            let replyText = data.reply || '';
+            if (!replyText && executedActions.length > 0) {
+              replyText = 'I have automatically executed the requested changes to your dashboard.';
+            }
+
+            const modelMsg = {
+              id: 'msg-' + Date.now(),
+              role: 'model',
+              text: replyText,
+              automatedActions: executedActions,
+              modelUsed: data.modelUsed,
+              timestamp: Date.now(),
+            };
+
+            chatMessages.push(modelMsg);
+            saveChatHistory();
+            renderChatMessages();
+          } catch (err) {
+            console.error('Chat error:', err);
+            removeThinkingIndicator();
+            chatMessages.push({
+              id: 'msg-' + Date.now(),
+              role: 'model',
+              text: '⚠️ **Network error**: Could not communicate with the Gemini server. Please verify your connection.',
+              timestamp: Date.now(),
+            });
+            saveChatHistory();
+            renderChatMessages();
+          } finally {
+            isGeneratingChat = false;
+            if (sendBtn) sendBtn.disabled = false;
+          }
+        }
+
+        function openChatDrawer() {
+          const drawer = document.getElementById('chat-drawer');
+          const backdrop = document.getElementById('chat-backdrop');
+          const panel = document.getElementById('chat-panel');
+
+          drawer.classList.remove('hidden');
+          requestAnimationFrame(() => {
+            backdrop.classList.remove('opacity-0');
+            panel.classList.remove('translate-x-full');
+            panel.classList.add('translate-x-0');
+          });
+
+          renderChatMessages();
+          setTimeout(() => {
+            const input = document.getElementById('chat-input');
+            if (input) input.focus();
+          }, 150);
+        }
+
+        function closeChatDrawer() {
+          const drawer = document.getElementById('chat-drawer');
+          const backdrop = document.getElementById('chat-backdrop');
+          const panel = document.getElementById('chat-panel');
+
+          backdrop.classList.add('opacity-0');
+          panel.classList.remove('translate-x-0');
+          panel.classList.add('translate-x-full');
+
+          setTimeout(() => {
+            drawer.classList.add('hidden');
+          }, 250);
+        }
+
         // Attach Event Listeners
         function setupEventListeners() {
           // Add Task Button
@@ -2009,17 +2541,76 @@
             }
           });
 
+          // Chatbot Event Listeners
+          const chatToggleBtn = document.getElementById('btn-toggle-chat');
+          if (chatToggleBtn) chatToggleBtn.addEventListener('click', openChatDrawer);
+
+          const floatingChatBtn = document.getElementById('floating-chat-btn');
+          if (floatingChatBtn) floatingChatBtn.addEventListener('click', openChatDrawer);
+
+          const closeChatBtn = document.getElementById('btn-close-chat');
+          if (closeChatBtn) closeChatBtn.addEventListener('click', closeChatDrawer);
+
+          const chatBackdrop = document.getElementById('chat-backdrop');
+          if (chatBackdrop) chatBackdrop.addEventListener('click', closeChatDrawer);
+
+          const clearChatBtn = document.getElementById('btn-clear-chat');
+          if (clearChatBtn) {
+            clearChatBtn.addEventListener('click', () => {
+              if (confirm('Clear chat history with Gemini?')) {
+                chatMessages = [WELCOME_CHAT_MESSAGE];
+                saveChatHistory();
+                renderChatMessages();
+                showToast('Chat history cleared', 'info');
+              }
+            });
+          }
+
+          const chatForm = document.getElementById('chat-form');
+          if (chatForm) {
+            chatForm.addEventListener('submit', (e) => {
+              e.preventDefault();
+              sendChatMessage();
+            });
+          }
+
+          const chatInput = document.getElementById('chat-input');
+          if (chatInput) {
+            chatInput.addEventListener('keydown', (e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendChatMessage();
+              }
+            });
+            chatInput.addEventListener('input', () => {
+              chatInput.style.height = 'auto';
+              chatInput.style.height = Math.min(chatInput.scrollHeight, 128) + 'px';
+            });
+          }
+
+          // Suggestion chips
+          const suggestionsContainer = document.getElementById('chat-suggestions');
+          if (suggestionsContainer) {
+            suggestionsContainer.addEventListener('click', (e) => {
+              const chip = e.target.closest('.chat-chip');
+              if (!chip) return;
+              const text = chip.textContent.replace(/^\+\s*/, '').trim();
+              sendChatMessage(text);
+            });
+          }
+
           // Keyboard Shortcuts
           window.addEventListener('keydown', (e) => {
-            // Close modals with Escape
+            // Close modals and drawer with Escape
             if (e.key === 'Escape') {
               closeTaskModal();
               closeDeleteModal();
               closeImportModal();
               closeFilePreview();
+              closeChatDrawer();
               backupDropdown.classList.add('hidden');
             }
-            // Quick add with 'n' or '/' to focus search if not in input
+            // Quick add with 'n' or '/' to focus search or 'j' for AI chat if not in input
             if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA' && e.target.tagName !== 'SELECT') {
               if (e.key === 'n' || e.key === 'N') {
                 e.preventDefault();
@@ -2027,6 +2618,9 @@
               } else if (e.key === '/') {
                 e.preventDefault();
                 document.getElementById('search-input').focus();
+              } else if (e.key === 'j' || e.key === 'J') {
+                e.preventDefault();
+                openChatDrawer();
               }
             }
           });
@@ -2036,6 +2630,7 @@
         function init() {
           initTheme();
           loadAssignments();
+          loadChatHistory();
           setupEventListeners();
           setView(activeView);
         }
